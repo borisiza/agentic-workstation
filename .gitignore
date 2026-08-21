@@ -1,0 +1,28 @@
+# Lo que un instalador (bmad-method, providers) deposita nace ignorado.
+_bmad/
+.claude/skills/
+.agents/
+.agent/
+.codex/
+.gemini/
+
+# Derivados regenerables.
+graphify-out/
+.bmad-worktrees/
+LOOP-STATE.md
+node_modules/
+logs/
+*.log
+
+# Secretos — nunca en el repo.
+.env
+.env.*
+.mcp.json
+mcp-archive.json
+settings.local.json
+**/secrets/
+**/credentials/
+*.pem
+*.key
+*.p12
+*.pfx

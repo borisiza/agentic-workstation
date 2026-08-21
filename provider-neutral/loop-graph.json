@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "node_types": ["state", "surface", "wave", "unit", "anchor", "reviewer"],
+  "edges": [
+    {
+      "from": "state",
+      "to": "unit",
+      "output": "per-story status derived from sprint-status.yaml (backlog/ready-for-dev/in-progress/review/done)",
+      "output_ref": "sprint-status.yaml",
+      "consumer": "scripts/bmad-sprint-status-path.sh",
+      "description": "bmad-sprint-status-path.sh locates the host project's sprint-status.yaml by name; bmad-statusline.sh calls it to read that state and derive phase/next/desync, never from a literal path."
+    },
+    {
+      "from": "surface",
+      "to": "unit",
+      "output": "Graphify's derived code graph, surfaced as a ready/semantic-pending/missing status",
+      "output_ref": "graphify-out/graph.json",
+      "consumer": "scripts/bmad-statusline.sh",
+      "description": "bmad-statusline.sh checks for the presence and freshness of graphify-out/graph.json to report the graph=ready/semantic-pending/missing status that gates /bmad-next phases. This is a status surfaced to humans and the loop gate, not an input consumed by bmad-loop-parallel.sh's own overlap check, which reads a separate `surface` field supplied externally through BMAD_PARALLEL_CANDIDATES (see the wave→unit edge below)."
+    },
+    {
+      "from": "wave",
+      "to": "unit",
+      "output": "worker-only mode flag for a wave participant, set by the parallel coordinator",
+      "output_ref": "BMAD_LOOP_WORKER_ONLY",
+      "consumer": "scripts/bmad-loop.sh",
+      "description": "When a unit runs as one half of a wave, bmad-loop-parallel.sh sets BMAD_LOOP_WORKER_ONLY=1 and bmad-loop.sh reads it to stop after its own story instead of running close_story (which would race on sprint-status.yaml)."
+    },
+    {
+      "from": "anchor",
+      "to": "unit",
+      "output": "local test suite exit status, the closure gate every unit must pass before its story can close",
+      "output_ref": "bmad-test-all.sh",
+      "consumer": "scripts/bmad-loop.sh",
+      "description": "close_story() in bmad-loop.sh invokes bmad-test-all.sh (or its BMAD_TEST_ALL override) and only proceeds to push/PR/merge on a passing exit code — real execution evidence, never a unit's own assertion."
+    },
+    {
+      "from": "unit",
+      "to": "reviewer",
+      "output": "the diff produced by the unit's implementation, materialized outside the worktree",
+      "output_ref": "{diff_file}",
+      "consumer": ".claude/skills/bmad-dev-auto/step-04-review.md",
+      "description": "step-04-review.md writes the unit's diff to {diff_file} once and hands reviewers the path (never the diff verbatim), so Blind Hunter, Edge Case Hunter and the Test Coverage Auditor all read the same materialized output."
+    }
+  ],
+  "anchors": [
+    {
+      "name": "local-test-suite",
+      "path": "scripts/bmad-test-all.sh",
+      "reason": "Closure gate for every story: satisfied only by a real exit code from the discovered test-*.sh/test-*.js suite, never by an agent declaring its own work done."
+    },
+    {
+      "name": "loop-graph-contract",
+      "path": "provider-neutral/loop-graph.json",
+      "guards": ["scripts/bmad-loop-graph.js", "scripts/bmad-review-route.js"],
+      "reason": "The graph contract itself, declared frozen by AD-16: a diff that touches its own node types, edges or width policy is meant to never auto-approve, regardless of diff size. Story 10.4 implemented that enforcement -- whole-file match on this anchor's path (already sufficient for edits to loop-graph.json itself) plus `guards` naming the validator/router code that decides what counts as touching this anchor, so that code can't be weakened without also touching this anchor."
+    },
+    {
+      "name": "review-policy",
+      "path": ".claude/skills/bmad-dev-auto/step-04-review.md",
+      "reason": "Review panel composition and triage rules, declared frozen by AD-16: a diff that changes who reviews or how findings are classified is meant to always escalate to full review. Enforcement (diff-routed review width) is Story 10.3's scope; this entry only records the invariant for 10.3 to read."
+    }
+  ],
+  "width_policy": {
+    "min": 1,
+    "ceiling": 3,
+    "cutoff": "A candidate story is excluded from a wave's selected group when it shares the same epic as any already-selected story, when it declares any dependency (a non-empty deps field), or when it declares the same non-empty surface value as any already-selected story. select_group() in scripts/bmad-loop-parallel.sh (and selectGroup() in scripts/bmad-wave-plan.js) tries each candidate as a possible anchor, in order; for each anchor it builds forward using only later candidates, adding one only if it survives the three filters against every member already in that attempt, up to min(--parallel, ceiling). It returns the first attempt (by anchor order) that reaches >=2 members -- if the first candidate is incompatible with everyone else, later candidates are retried as fresh anchors instead of giving up. Ceiling is 3 stories."
+  }
+}

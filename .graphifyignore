@@ -1,0 +1,30 @@
+# Superficies generadas por instaladores/providers — no indexar.
+.agent/
+_bmad/
+.claude/skills/
+.agents/
+.codex/
+.gemini/
+graphify-out/
+node_modules/
+logs/
+*.log
+
+# Sensible: default-deny.
+.env
+.env.*
+.mcp.json
+mcp-archive.json
+settings.local.json
+**/*token*
+**/*secret*
+**/*credential*
+**/*password*
+**/secrets/
+**/credentials/
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/.ssh/
+**/.aws/
