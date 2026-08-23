@@ -26,3 +26,7 @@ settings.local.json
 *.key
 *.p12
 *.pfx
+
+# Backups de reconciliacion del toolkit (bmad-update-consumer, merge de settings).
+.claude/backups/
+*.bak

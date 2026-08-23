@@ -2,20 +2,30 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|Grep",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/asuresky/.local/bin/graphify hook-guard search"
-          }
-        ]
-      },
-      {
         "matcher": "Read|Glob",
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/asuresky/.local/bin/graphify hook-guard read"
+            "command": "graphify hook-guard read"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "graphify hook-guard search"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v jq >/dev/null 2>&1; then jq -e \".tool_input.run_in_background == false\" >/dev/null 2>&1 || printf '%s' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"run_in_background ausente o distinto de false. El Agent tool backgroundea por defecto cuando se omite el parametro, y en el loop desatendido eso cuelga la corrida esperando una notificacion que nunca llega (19-10: 2 corridas cortadas asi con la prosa explicita ya cargada). Reintenta la MISMA invocacion agregando run_in_background: false.\"}}'; fi",
+            "statusMessage": "Verificando run_in_background"
           }
         ]
       }
