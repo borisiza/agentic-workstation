@@ -29,3 +29,7 @@ settings.local.json
 
 # TTS audio local — nunca commitear
 .claude/audio/
+
+# Backups de reconciliacion del toolkit (bmad-update-consumer, merge de settings).
+.claude/backups/
+*.bak

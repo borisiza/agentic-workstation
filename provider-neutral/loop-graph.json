@@ -39,8 +39,8 @@
       "to": "reviewer",
       "output": "the diff produced by the unit's implementation, materialized outside the worktree",
       "output_ref": "{diff_file}",
-      "consumer": ".claude/skills/bmad-dev-auto/step-04-review.md",
-      "description": "step-04-review.md writes the unit's diff to {diff_file} once and hands reviewers the path (never the diff verbatim), so Blind Hunter, Edge Case Hunter and the Test Coverage Auditor all read the same materialized output."
+      "consumer": ".claude/skills/toolkit-dev-auto/step-04-review.md",
+      "description": "step-04-review.md writes the unit's diff to {diff_file} once and hands reviewers the path (never the diff verbatim), so Blind Hunter, Edge Case Hunter, the Verification Gap Reviewer and the Test Coverage Auditor all read the same materialized output. Reviewers are dispatched by path to a vendored review-prompts/*.md file, never by invoking a skill (BMAD 6.11 #2638/#2642 reverted lens-routing for phase-4 reviewers: the indirection truncated instructions)."
     }
   ],
   "anchors": [
@@ -57,7 +57,7 @@
     },
     {
       "name": "review-policy",
-      "path": ".claude/skills/bmad-dev-auto/step-04-review.md",
+      "path": ".claude/skills/toolkit-dev-auto/step-04-review.md",
       "reason": "Review panel composition and triage rules, declared frozen by AD-16: a diff that changes who reviews or how findings are classified is meant to always escalate to full review. Enforcement (diff-routed review width) is Story 10.3's scope; this entry only records the invariant for 10.3 to read."
     }
   ],
