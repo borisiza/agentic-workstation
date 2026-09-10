@@ -1,0 +1,57 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 09-10-2026 15:39
+last_updated: 09-10-2026 15:39
+project: agentic-workstation
+project_key: NOKEY
+tracking_system: file-system
+story_location: skills/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-publishable-repo-skeleton-with-hygiene-gates: backlog
+  1-2-declare-the-node-role-and-verify-readiness-with-doctor-sh: backlog
+  1-3-enroll-a-linux-host: backlog
+  1-4-enroll-a-macos-host: backlog
+  1-5-enroll-a-windows-host-via-wsl2: backlog
+  1-6-set-up-a-client-only-node-and-the-onboarding-readme: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host: backlog
+  2-2-list-and-stop-workspace-sessions-on-the-host: backlog
+  2-3-connect-from-a-client-to-a-host-workspace-with-one-command: backlog
+  2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-opt-a-host-into-hardened-key-only-openssh-over-the-tailnet: backlog
+  3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall: backlog
+  epic-3-retrospective: optional
