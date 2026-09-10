@@ -26,3 +26,6 @@ settings.local.json
 *.key
 *.p12
 *.pfx
+
+# TTS audio local — nunca commitear
+.claude/audio/
