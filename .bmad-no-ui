@@ -1,0 +1,7 @@
+# Sin interfaz de usuario en el MVP
+
+El MVP de Agentic Workstation es CLI puro: SSH sobre tailnet, tmux y scripts bash
+(connect.sh, doctor.sh, start-claude.sh, status.sh, stop.sh, enroll.sh).
+El PRD lista el portal web/Flutter + Firebase en Non-goals, diferido a roadmap Phase 9.
+
+Este marcador salta la fase bmad-ux. Borralo cuando arranque el portal del roadmap.
