@@ -65,3 +65,11 @@
 - source_spec: `skills/implementation-artifacts/spec-1-5-enroll-a-windows-host-via-wsl2.md`
   summary: none of the three host guides (node-linux.md, node-macos.md, node-wsl.md) has a decommission/rollback section (`tailscale logout`/`down`, disabling the relevant daemon, removing WSL's Task Scheduler entry) for removing a host from the tailnet later.
   evidence: blind-hunter review of story 1.5 flagged this for WSL, but it applies equally to the two already-approved guides; cross-cutting doc gap, best added once across all three rather than asymmetrically.
+
+- source_spec: `skills/implementation-artifacts/spec-1-6-set-up-a-client-only-node-and-the-onboarding-readme.md`
+  summary: docs/node-client.md's three `cp config/local.env.example config/local.env` steps are unguarded and silently overwrite a previously-configured config/local.env on a guide re-run, extending the same pre-existing pattern already deferred for node-linux.md/node-macos.md to a fourth file.
+  evidence: blind-hunter and edge-case-hunter reviews of story 1.6 both flagged this; cross-cutting doc gap across all four node guides, best fixed once rather than patched asymmetrically in just one.
+
+- source_spec: `skills/implementation-artifacts/spec-1-6-set-up-a-client-only-node-and-the-onboarding-readme.md`
+  summary: docs/node-client.md gives no guidance for restrictive networks (corporate/campus firewalls blocking Tailscale's UDP hole-punching, DERP relay fallback and its latency) even though the guide explicitly targets "a laptop you carry around" — the client scenario most likely to hit NAT/firewall variability across networks.
+  evidence: blind-hunter review of story 1.6 flagged this; addressing it well needs Tailscale-specific network-diagnostics guidance beyond this story's Tasks & Acceptance scope, and no sibling guide (node-linux.md/macos.md/wsl.md) covers this either.
