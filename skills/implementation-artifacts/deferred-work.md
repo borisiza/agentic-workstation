@@ -29,3 +29,15 @@
 - source_spec: `skills/implementation-artifacts/spec-1-3-enroll-a-linux-host.md`
   summary: scripts/doctor.sh --check (its self-test) is never invoked in CI (.github/workflows/hygiene.yml only runs shellcheck + gitleaks) and no other invocation exists repo-wide, so nothing verifies doctor.sh's actual PASS/SKIP contract stays consistent with what onboarding docs tell readers to expect.
   evidence: verification-gap review of story 1.3 confirmed this by reading hygiene.yml and searching the repo for any `doctor.sh --check` invocation; wiring doctor.sh --check into CI is a scripts/CI change, out of this docs-only story's boundaries (`Never: do not modify scripts/doctor.sh or any other script`).
+
+- source_spec: `skills/implementation-artifacts/spec-1-4-enroll-a-macos-host.md`
+  summary: docs/node-linux.md and docs/node-macos.md both use `<repo-url>` as a placeholder in their clone step without listing it alongside `<node>`/`<user>` in the Conventions section, and both let re-running `cp config/local.env.example config/local.env` silently overwrite a previously-configured `config/local.env`, and neither handles `git pull` hitting diverged history on a re-attempt.
+  evidence: blind-hunter and edge-case-hunter reviews of story 1.4 both flagged these; identical pattern already shipped (and accepted) in story 1.3's node-linux.md, so this is a cross-cutting doc-consistency gap best fixed once across both guides rather than patched asymmetrically in just one.
+
+- source_spec: `skills/implementation-artifacts/spec-1-4-enroll-a-macos-host.md`
+  summary: neither node-linux.md nor node-macos.md tells a headless/GUI-less reader how to complete `tailscale up --ssh`'s first-run login or the check-mode re-authentication browser prompt when no local browser is available on the node being enrolled.
+  evidence: edge-case-hunter review of story 1.4 flagged this; both guides assume an interactive desktop session, which covers the story's stated scope (a Mac/Linux desktop being enrolled) but would strand a genuinely headless server reader.
+
+- source_spec: `skills/implementation-artifacts/spec-1-4-enroll-a-macos-host.md`
+  summary: scripts/doctor.sh's check_macos_backend (doctor.sh:258) hardcodes the Homebrew prefixes `/opt/homebrew/*`/`/usr/local/*` instead of checking against `$(brew --prefix)`, so a custom `HOMEBREW_PREFIX` install would FAIL the check even with a correctly running Homebrew `tailscaled`; it also can't distinguish "no tailscaled running" from "both the GUI app's and Homebrew's tailscaled running simultaneously" — both report the same FAIL with the same generic hint.
+  evidence: edge-case-hunter review of story 1.4 flagged this while cross-checking docs/node-macos.md against the real check; it's a scripts/doctor.sh behavior gap, out of this docs-only story's boundaries (`Never: do not modify scripts/doctor.sh or any other script`), and non-default Homebrew prefixes are uncommon.
