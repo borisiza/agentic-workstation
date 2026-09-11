@@ -2,9 +2,10 @@
 title: 'Publishable repo skeleton with hygiene gates'
 type: 'feature'
 created: '2026-09-10'
-status: 'ready-for-dev'
+status: 'in-progress'
 review_loop_iteration: 0
 context: []
+baseline_commit: 'f8739296e9fb82c8849cc9fa98c587d1e7e60dc7'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">

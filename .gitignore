@@ -26,6 +26,9 @@ settings.local.json
 *.key
 *.p12
 *.pfx
+config/local.env
+authorized_keys
+docs/discovery/
 
 # TTS audio local — nunca commitear
 .claude/audio/
