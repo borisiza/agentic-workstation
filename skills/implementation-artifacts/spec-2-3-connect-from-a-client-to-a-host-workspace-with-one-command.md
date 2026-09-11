@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 29859, output: 9191, cache_read: 4156756, total: 4195806}
+final_revision: 'c0c1cafd09269eed2027b2980453f53bfd025183'
 title: 'Connect from a client to a host workspace with one command'
 type: 'feature'
 created: '2026-09-11'
