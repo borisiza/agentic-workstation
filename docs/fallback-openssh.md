@@ -125,8 +125,15 @@ chmod 700 ~/.ssh
 ```
 
 Append the **public** key of whichever client should be allowed in to
-`~/.ssh/authorized_keys` (never copy a private key anywhere), then lock down
-its permissions:
+`~/.ssh/authorized_keys` (never copy a private key anywhere). The key comes
+from the client machine's own `~/.ssh/id_ed25519.pub` (or equivalent
+`.pub` file) — copy that one line over, for example:
+
+```sh
+echo "ssh-ed25519 AAAA...client-key-here" >> ~/.ssh/authorized_keys
+```
+
+Then lock down its permissions:
 
 ```sh
 chmod 600 ~/.ssh/authorized_keys

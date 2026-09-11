@@ -2,7 +2,7 @@
 title: 'Opt a host into hardened key-only OpenSSH over the tailnet'
 type: 'feature'
 created: '2026-09-11'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 1
 context: []
 baseline_commit: 'af23fd96cbd1e03b8e145f96e72547061c95909c'
@@ -54,10 +54,10 @@ baseline_commit: 'af23fd96cbd1e03b8e145f96e72547061c95909c'
 - [x] `scripts/doctor.sh` -- add `selftest_case_fallback_sshd_*` covering every I/O Matrix row, registered in `run_self_test()`
 - [x] `docs/fallback-openssh.md` -- write the host-setup guide (macOS Remote Login, Linux/WSL `openssh-server`), the four hardening settings + `sshd -T` verification, `~/.ssh` permissions, `FALLBACK_SSHD=1` in `config/local.env`, explicit "documented exception" framing, tailnet-only reachability note, `tailscale up` without `--ssh` -- satisfies this story's AC
 - [x] `docs/node-macos.md` -- update the forward-reference placeholder to link `docs/fallback-openssh.md`
-- [ ] `scripts/doctor.sh` -- make `check_macos_backend()`'s Homebrew-`tailscaled` requirement SKIP when `FALLBACK_SSHD=1` (Linux/WSL platform-contract checks are unaffected); add a `selftest_case_fallback_sshd_macos_gui_app` case (`DOCTOR_STUB_UNAME=Darwin`, GUI-app backend path, `FALLBACK_SSHD=1`) asserting `platform-contract` does not FAIL -- closes the bad_spec found in review: this story's whole premise is a Mac keeping the GUI app, which must not permanently FAIL `doctor.sh`
-- [ ] `scripts/doctor.sh` -- `check_sshd_hardening()`: also recognize the pre-OpenSSH-8.7 `ChallengeResponseAuthentication` alias for `KbdInteractiveAuthentication` (older Ubuntu/RHEL sshd, which this guide explicitly supports, would otherwise always FAIL); tighten `AllowUsers` to reject empty/wildcard/multi-user values (currently any non-empty value PASSes, including `*` or multiple users, which defeats "one login account"); check for `sshd`'s binary at common sbin paths in addition to `command -v` (sshd is rarely on a non-root user's PATH) -- add/extend selftest cases for each of these three branches
-- [ ] `scripts/doctor.sh` -- `check_authorized_keys_perms()`: fix the early-return path so a bad `~/.ssh` permission is still reported when `authorized_keys` is also missing (currently silently dropped)
-- [ ] `scripts/doctor.sh` -- `run_host_checks()`'s `FALLBACK_SSHD`-not-`1` SKIP messages currently hardcode the literal text `FALLBACK_SSHD=0`; interpolate the actual value instead
+- [x] `scripts/doctor.sh` -- make `check_macos_backend()`'s Homebrew-`tailscaled` requirement SKIP when `FALLBACK_SSHD=1` (Linux/WSL platform-contract checks are unaffected); add a `selftest_case_fallback_sshd_macos_gui_app` case (`DOCTOR_STUB_UNAME=Darwin`, GUI-app backend path, `FALLBACK_SSHD=1`) asserting `platform-contract` does not FAIL -- closes the bad_spec found in review: this story's whole premise is a Mac keeping the GUI app, which must not permanently FAIL `doctor.sh`
+- [x] `scripts/doctor.sh` -- `check_sshd_hardening()`: also recognize the pre-OpenSSH-8.7 `ChallengeResponseAuthentication` alias for `KbdInteractiveAuthentication` (older Ubuntu/RHEL sshd, which this guide explicitly supports, would otherwise always FAIL); tighten `AllowUsers` to reject empty/wildcard/multi-user values (currently any non-empty value PASSes, including `*` or multiple users, which defeats "one login account"); check for `sshd`'s binary at common sbin paths in addition to `command -v` (sshd is rarely on a non-root user's PATH) -- add/extend selftest cases for each of these three branches
+- [x] `scripts/doctor.sh` -- `check_authorized_keys_perms()`: fix the early-return path so a bad `~/.ssh` permission is still reported when `authorized_keys` is also missing (currently silently dropped)
+- [x] `scripts/doctor.sh` -- `run_host_checks()`'s `FALLBACK_SSHD`-not-`1` SKIP messages currently hardcode the literal text `FALLBACK_SSHD=0`; interpolate the actual value instead
 
 **Acceptance Criteria:**
 - Given `docs/fallback-openssh.md` followed on macOS or Linux/WSL, when sshd is configured as documented, then `sshd -T` confirms all four hardening settings and the guide states reachability is tailnet-bounded, not `ListenAddress`-pinned
@@ -85,3 +85,52 @@ Mirror `check_platform_contract()`'s OS-dispatch shape only if a hardening check
 
 **Manual checks (if no CLI):**
 - `docs/fallback-openssh.md` reads coherently end-to-end and cross-links resolve (node-macos.md, node-linux.md, node-wsl.md as applicable)
+
+## Suggested Review Order
+
+**SKIP symmetry between the two auth paths**
+
+- Entry point: the flag itself, defaulted like every other config var in this function.
+  [`doctor.sh:93`](../../scripts/doctor.sh#L93)
+
+- Existing Tailscale-SSH check now SKIPs in favor of the documented fallback.
+  [`doctor.sh:224`](../../scripts/doctor.sh#L224)
+
+- The bad_spec fix: macOS-backend requirement SKIPs too, since the GUI-app Mac is this story's whole premise.
+  [`doctor.sh:296`](../../scripts/doctor.sh#L296)
+
+- Dispatches the three new checks only when the flag is set, SKIPs them (with the real value interpolated) otherwise.
+  [`doctor.sh:423`](../../scripts/doctor.sh#L423)
+
+**New hardening checks**
+
+- Verifies sshd is actually running before trusting its config.
+  [`doctor.sh:319`](../../scripts/doctor.sh#L319)
+
+- Core logic: sbin-path fallback, the pre-8.7 ChallengeResponseAuthentication alias, and AllowUsers empty/wildcard/multi rejection.
+  [`doctor.sh:327`](../../scripts/doctor.sh#L327)
+
+- Permission check with the combined-failure fix — a bad `~/.ssh` mode is no longer dropped when `authorized_keys` is also missing.
+  [`doctor.sh:393`](../../scripts/doctor.sh#L393)
+
+**Guide deliverable**
+
+- Frames the whole doc as an explicit, opt-in exception to the primary Tailscale-SSH path.
+  [`fallback-openssh.md:3`](../../docs/fallback-openssh.md#L3)
+
+- States reachability comes from the tailnet boundary, never a `ListenAddress` pin or port-forward — the AC's core safety claim.
+  [`fallback-openssh.md:186`](../../docs/fallback-openssh.md#L186)
+
+- Forward-reference from the sibling macOS guide now resolves to a real file.
+  [`node-macos.md:91`](../../docs/node-macos.md#L91)
+
+**Test coverage (peripheral)**
+
+- Representative case: hardened path with all four settings correct, permissions right, over both roles' SKIP/PASS split.
+  [`doctor.sh:860`](../../scripts/doctor.sh#L860)
+
+- The case that specifically proves the platform-contract bad_spec fix: GUI-app backend + fallback on, no FAIL.
+  [`doctor.sh:1031`](../../scripts/doctor.sh#L1031)
+
+- Client-role SKIP-everything case, confirming the fallback checks respect the same role gate as the rest of `run_host_checks`.
+  [`doctor.sh:1004`](../../scripts/doctor.sh#L1004)
