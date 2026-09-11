@@ -48,7 +48,7 @@ development_status:
   2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host: done
   2-2-list-and-stop-workspace-sessions-on-the-host: done
   2-3-connect-from-a-client-to-a-host-workspace-with-one-command: done
-  2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di: backlog
+  2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di: review
   epic-2-retrospective: optional
 
   epic-3: backlog

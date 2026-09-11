@@ -1,0 +1,17 @@
+# tmux.conf.example -- optional tmux settings for the claude-<workspace>
+# sessions that start-claude.sh creates: a large scrollback so a long-running
+# Claude Code conversation survives a reattach (NFR2), and mouse support for
+# scrolling/pane selection. Not read by any script; copy it to ~/.tmux.conf
+# (or append these two lines to an existing one) if you want them.
+#
+# Usage once installed:
+#   cp config/tmux.conf.example ~/.tmux.conf
+#   # then either start a new tmux server, or reload an existing one:
+#   tmux source-file ~/.tmux.conf
+
+# Keep a large scrollback buffer per session/window (lines of history).
+set -g history-limit 50000
+
+# Mouse support: click to select a pane, scroll wheel to scroll the
+# scrollback, drag a border to resize.
+set -g mouse on
