@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 22847, output: 12311, cache_read: 4670117, total: 4705275}
+final_revision: '6527efaecd4f07ebf2d656e24aea4377422a1888'
 title: 'Opt a host into hardened key-only OpenSSH over the tailnet'
 type: 'feature'
 created: '2026-09-11'
