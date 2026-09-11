@@ -41,3 +41,27 @@
 - source_spec: `skills/implementation-artifacts/spec-1-4-enroll-a-macos-host.md`
   summary: scripts/doctor.sh's check_macos_backend (doctor.sh:258) hardcodes the Homebrew prefixes `/opt/homebrew/*`/`/usr/local/*` instead of checking against `$(brew --prefix)`, so a custom `HOMEBREW_PREFIX` install would FAIL the check even with a correctly running Homebrew `tailscaled`; it also can't distinguish "no tailscaled running" from "both the GUI app's and Homebrew's tailscaled running simultaneously" — both report the same FAIL with the same generic hint.
   evidence: edge-case-hunter review of story 1.4 flagged this while cross-checking docs/node-macos.md against the real check; it's a scripts/doctor.sh behavior gap, out of this docs-only story's boundaries (`Never: do not modify scripts/doctor.sh or any other script`), and non-default Homebrew prefixes are uncommon.
+
+- source_spec: `skills/implementation-artifacts/spec-1-5-enroll-a-windows-host-via-wsl2.md`
+  summary: docs/node-wsl.md has no step-0 prerequisite confirming WSL2 itself (vs WSL1) is installed and set as default, nor the Windows Virtual Machine Platform feature / initial reboot that first-time `wsl --install` requires — the guide starts at `wsl --version`, assuming a working WSL2 install already exists.
+  evidence: blind-hunter and edge-case-hunter reviews of story 1.5 both flagged this; the story's own AC Given clause ("Given Windows with WSL >= 2.4.4") explicitly assumes WSL2 is already installed as a starting precondition, so it's in-scope-adjacent but not required by this story's acceptance criteria — worth folding into Story 1.6's README onboarding index instead.
+
+- source_spec: `skills/implementation-artifacts/spec-1-5-enroll-a-windows-host-via-wsl2.md`
+  summary: none of docs/node-wsl.md, docs/node-linux.md, or docs/node-macos.md gives troubleshooting guidance for `tailscale up --ssh` itself failing (e.g. WSL2's NAT/vEthernet adapter or Windows Firewall blocking the tailnet join) — only the platform-contract/systemd and the security/port checks have documented failure paths.
+  evidence: edge-case-hunter review of story 1.5 flagged this for WSL specifically, but the same gap exists in the two already-approved sibling guides; best fixed once across all three rather than patched asymmetrically in just one.
+
+- source_spec: `skills/implementation-artifacts/spec-1-5-enroll-a-windows-host-via-wsl2.md`
+  summary: the plain-SSH fallback and the tailscaled-restart manual recovery shim in all three host guides (linux/macos/wsl) assume "a working, locked-down local sshd," but no guide in this repo ever sets one up — that precondition is actually the Epic 3 key-only OpenSSH guide (FR18), which doesn't exist yet.
+  evidence: blind-hunter review of story 1.5 flagged this by tracing the recovery caveat's stated precondition back to its source; node-macos.md's spec already names FR18/Epic 3 as the fallback's real owner, so this is a forward-reference gap that resolves itself once Epic 3 ships, not a defect to patch now.
+
+- source_spec: `skills/implementation-artifacts/spec-1-5-enroll-a-windows-host-via-wsl2.md`
+  summary: docs/node-wsl.md cites `scripts/doctor.sh` line numbers directly in its prose (`:134`, `:248`, `:276`, `:286`) — a pattern neither node-linux.md nor node-macos.md uses — with nothing in the repo (no test, no CI step) keeping those citations in sync with the script; a future doctor.sh edit that shifts lines would leave the doc silently stale.
+  evidence: verification-gap review of story 1.5 confirmed all citations are accurate as of this commit but flagged the fragility; not a defect in this diff, so not patched, but worth a lint/check if this citation style spreads to more docs.
+
+- source_spec: `skills/implementation-artifacts/spec-1-5-enroll-a-windows-host-via-wsl2.md`
+  summary: docs/node-wsl.md's Task Scheduler "run whether logged on or not" entry has no guidance for what happens when the Windows account's password changes or expires — Task Scheduler silently stops launching the distro on next restart with no alert, breaking the guide's unattended-reachability guarantee.
+  evidence: edge-case-hunter review of story 1.5 flagged this; addressing it well needs either a passwordless/gMSA-style credential approach or an explicit monitoring recommendation, which is a design call beyond a one-line patch.
+
+- source_spec: `skills/implementation-artifacts/spec-1-5-enroll-a-windows-host-via-wsl2.md`
+  summary: none of the three host guides (node-linux.md, node-macos.md, node-wsl.md) has a decommission/rollback section (`tailscale logout`/`down`, disabling the relevant daemon, removing WSL's Task Scheduler entry) for removing a host from the tailnet later.
+  evidence: blind-hunter review of story 1.5 flagged this for WSL, but it applies equally to the two already-approved guides; cross-cutting doc gap, best added once across all three rather than asymmetrically.
