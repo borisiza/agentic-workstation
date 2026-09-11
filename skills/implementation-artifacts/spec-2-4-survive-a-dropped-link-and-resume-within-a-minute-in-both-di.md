@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 166147, output: 57256, cache_read: 10049331, total: 10272734}
+final_revision: '2485b34f4660a7c48156e81bd74c940ccd09ba5f'
 title: 'Survive a dropped link and resume within a minute, in both directions'
 type: 'feature'
 created: '2026-09-11'
