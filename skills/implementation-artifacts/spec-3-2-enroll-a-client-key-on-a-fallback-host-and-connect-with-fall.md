@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 28708, output: 13495, cache_read: 6678328, total: 6720531}
+final_revision: 'a8ee25fee32634d272d3c1074f92b7a8295602f7'
 title: 'Enroll a client key on a fallback host and connect with `--fallback`'
 type: 'feature'
 created: '2026-09-11'
