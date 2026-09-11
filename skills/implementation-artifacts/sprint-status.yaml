@@ -38,7 +38,7 @@ development_status:
   epic-1: in-progress
   1-1-publishable-repo-skeleton-with-hygiene-gates: done
   1-2-declare-the-node-role-and-verify-readiness-with-doctor-sh: done
-  1-3-enroll-a-linux-host: review
+  1-3-enroll-a-linux-host: done
   1-4-enroll-a-macos-host: backlog
   1-5-enroll-a-windows-host-via-wsl2: backlog
   1-6-set-up-a-client-only-node-and-the-onboarding-readme: backlog
