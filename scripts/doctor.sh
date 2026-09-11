@@ -116,6 +116,7 @@ resolve_and_validate_role() {
   esac
 
   WORKSPACES_DIR="${WORKSPACES_DIR:-$HOME/workspaces}"
+  FALLBACK_SSHD="${FALLBACK_SSHD:-0}"
 }
 
 # ---------------------------------------------------------------------------
@@ -220,6 +221,10 @@ run_common_checks() {
 # ---------------------------------------------------------------------------
 
 check_tailscale_ssh_advertised() {
+  if [ "$FALLBACK_SSHD" = "1" ]; then
+    emit SKIP "tailscale-ssh-advertised" "FALLBACK_SSHD=1: this host uses the documented OpenSSH fallback instead"
+    return
+  fi
   if ! command -v tailscale >/dev/null 2>&1; then
     emit SKIP "tailscale-ssh-advertised" "tailscale not installed"
     return
@@ -288,7 +293,11 @@ check_platform_contract() {
   os="$(uname -s)"
   case "$os" in
     Darwin)
-      check_macos_backend
+      if [ "$FALLBACK_SSHD" = "1" ]; then
+        emit SKIP "platform-contract" "FALLBACK_SSHD=1: Homebrew tailscaled backend not required for the OpenSSH fallback"
+      else
+        check_macos_backend
+      fi
       ;;
     Linux)
       if is_wsl; then
@@ -303,17 +312,130 @@ check_platform_contract() {
   esac
 }
 
+# ---------------------------------------------------------------------------
+# Fallback OpenSSH checks (host|both, only when FALLBACK_SSHD=1)
+# ---------------------------------------------------------------------------
+
+check_sshd_running() {
+  if pgrep -x sshd >/dev/null 2>&1; then
+    emit PASS "sshd-running" ""
+  else
+    emit FAIL "sshd-running" "start sshd: macOS -- enable Remote Login in System Settings > General > Sharing; Linux/WSL -- sudo systemctl enable --now ssh (or sshd)"
+  fi
+}
+
+check_sshd_hardening() {
+  local sshd_bin="" candidate
+  if command -v sshd >/dev/null 2>&1; then
+    sshd_bin="sshd"
+  else
+    for candidate in /usr/sbin/sshd /sbin/sshd; do
+      if [ -x "$candidate" ]; then
+        sshd_bin="$candidate"
+        break
+      fi
+    done
+  fi
+  if [ -z "$sshd_bin" ]; then
+    emit FAIL "sshd-hardening" "sshd not found on PATH or in /usr/sbin, /sbin"
+    return
+  fi
+  local out
+  if ! out="$("$sshd_bin" -T 2>/dev/null)"; then
+    emit FAIL "sshd-hardening" "sshd -T failed -- check sshd_config for syntax errors"
+    return
+  fi
+
+  local bad="" setting actual
+  for setting in passwordauthentication permitrootlogin; do
+    actual="$(printf '%s\n' "$out" | awk -v s="$setting" 'tolower($1)==s {print tolower($2)}')"
+    if [ "$actual" != "no" ]; then
+      bad="$bad $setting=${actual:-unset}"
+    fi
+  done
+
+  # KbdInteractiveAuthentication was ChallengeResponseAuthentication before OpenSSH 8.7.
+  actual="$(printf '%s\n' "$out" | awk 'tolower($1)=="kbdinteractiveauthentication" {print tolower($2)}')"
+  if [ -z "$actual" ]; then
+    actual="$(printf '%s\n' "$out" | awk 'tolower($1)=="challengeresponseauthentication" {print tolower($2)}')"
+  fi
+  if [ "$actual" != "no" ]; then
+    bad="$bad kbdinteractiveauthentication=${actual:-unset}"
+  fi
+
+  local allowusers_line
+  allowusers_line="$(printf '%s\n' "$out" | awk 'tolower($1)=="allowusers" {for(i=2;i<=NF;i++) printf "%s ", tolower($i); print ""}')"
+  allowusers_line="$(printf '%s' "$allowusers_line" | sed 's/[[:space:]]*$//')"
+  if [ -z "$allowusers_line" ]; then
+    bad="$bad allowusers=unset"
+  elif [ "$(printf '%s' "$allowusers_line" | wc -w | tr -d ' ')" != "1" ]; then
+    bad="$bad allowusers=multiple($allowusers_line)"
+  else
+    case "$allowusers_line" in
+      *'*'* | *'?'*) bad="$bad allowusers=wildcard($allowusers_line)" ;;
+    esac
+  fi
+
+  if [ -n "$bad" ]; then
+    emit FAIL "sshd-hardening" "fix sshd_config:${bad}"
+  else
+    emit PASS "sshd-hardening" ""
+  fi
+}
+
+check_authorized_keys_perms() {
+  local ssh_dir="$HOME/.ssh" ak="$HOME/.ssh/authorized_keys"
+  local dir_mode ak_mode bad=""
+
+  if [ ! -d "$ssh_dir" ]; then
+    emit FAIL "authorized-keys-perms" "create $ssh_dir and run: chmod 700 $ssh_dir"
+    return
+  fi
+  dir_mode="$(octal_mode "$ssh_dir")"
+  if [ "$dir_mode" != "700" ]; then
+    bad="${bad}$ssh_dir is $dir_mode (want 700); "
+  fi
+
+  if [ ! -f "$ak" ]; then
+    bad="${bad}create $ak with the allowed public key(s), then: chmod 600 $ak"
+    emit FAIL "authorized-keys-perms" "$bad"
+    return
+  fi
+  ak_mode="$(octal_mode "$ak")"
+  if [ "$ak_mode" != "600" ]; then
+    bad="${bad}$ak is $ak_mode (want 600)"
+  fi
+
+  if [ -n "$bad" ]; then
+    emit FAIL "authorized-keys-perms" "$bad"
+  else
+    emit PASS "authorized-keys-perms" ""
+  fi
+}
+
 run_host_checks() {
   case "$ROLE" in
     host | both)
       check_tailscale_ssh_advertised
       check_workspaces_dir
       check_platform_contract
+      if [ "$FALLBACK_SSHD" = "1" ]; then
+        check_sshd_running
+        check_sshd_hardening
+        check_authorized_keys_perms
+      else
+        emit SKIP "sshd-running" "FALLBACK_SSHD=${FALLBACK_SSHD} (not 1)"
+        emit SKIP "sshd-hardening" "FALLBACK_SSHD=${FALLBACK_SSHD} (not 1)"
+        emit SKIP "authorized-keys-perms" "FALLBACK_SSHD=${FALLBACK_SSHD} (not 1)"
+      fi
       ;;
     client)
       emit SKIP "tailscale-ssh-advertised" "client role"
       emit SKIP "workspaces-dir" "client role"
       emit SKIP "platform-contract" "client role"
+      emit SKIP "sshd-running" "client role"
+      emit SKIP "sshd-hardening" "client role"
+      emit SKIP "authorized-keys-perms" "client role"
       ;;
   esac
 }
@@ -377,11 +499,40 @@ EOF
 
   cat >"$bin_dir/pgrep" <<'EOF'
 #!/usr/bin/env bash
-if [ -n "${DOCTOR_STUB_TAILSCALED_PATH:-}" ]; then
-  printf '4242 %s\n' "$DOCTOR_STUB_TAILSCALED_PATH"
-  exit 0
-fi
-exit 1
+case "$*" in
+  *tailscaled*)
+    if [ -n "${DOCTOR_STUB_TAILSCALED_PATH:-}" ]; then
+      printf '4242 %s\n' "$DOCTOR_STUB_TAILSCALED_PATH"
+      exit 0
+    fi
+    exit 1
+    ;;
+  *sshd*)
+    if [ "${DOCTOR_STUB_SSHD_RUNNING:-0}" = "1" ]; then
+      printf '4343\n'
+      exit 0
+    fi
+    exit 1
+    ;;
+  *)
+    exit 1
+    ;;
+esac
+EOF
+
+  cat >"$bin_dir/sshd" <<'EOF'
+#!/usr/bin/env bash
+case "${1:-}" in
+  -T)
+    printf 'passwordauthentication %s\n' "${DOCTOR_STUB_SSHD_PASSWORDAUTHENTICATION:-no}"
+    printf 'permitrootlogin %s\n' "${DOCTOR_STUB_SSHD_PERMITROOTLOGIN:-no}"
+    printf 'kbdinteractiveauthentication %s\n' "${DOCTOR_STUB_SSHD_KBDINTERACTIVEAUTHENTICATION:-no}"
+    printf 'allowusers %s\n' "${DOCTOR_STUB_SSHD_ALLOWUSERS:-testuser}"
+    ;;
+  *)
+    exit 0
+    ;;
+esac
 EOF
 
   cat >"$bin_dir/ps" <<'EOF'
@@ -398,7 +549,7 @@ exec /bin/ps "$@"
 EOF
 
   chmod +x "$bin_dir"/tailscale "$bin_dir"/tmux "$bin_dir"/claude "$bin_dir"/git \
-    "$bin_dir"/uname "$bin_dir"/pgrep "$bin_dir"/ps
+    "$bin_dir"/uname "$bin_dir"/pgrep "$bin_dir"/ps "$bin_dir"/sshd
 }
 
 assert_exit_eq() {
@@ -662,6 +813,161 @@ selftest_case_wsl_pid1() {
   return "$ok"
 }
 
+selftest_case_fallback_sshd_disabled() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-sshd-disabled"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home/.ssh" "$dir/workspaces"
+  chmod 700 "$dir/home/.ssh"
+  printf 'NODE_ROLE=host\n' >"$dir/local.env"
+  local out="$dir/out" err="$dir/err" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" WORKSPACES_DIR="$dir/workspaces" \
+    DOCTOR_CONFIG_FILE="$dir/local.env" \
+    DOCTOR_STUB_TS_STATE=running DOCTOR_STUB_TS_SSH=1 \
+    DOCTOR_STUB_UNAME=Linux \
+    bash "$SCRIPT_PATH" >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 0 "$rc" || ok=1
+  assert_stdout_not_contains "$case_name" "$out" '^FAIL' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^PASS  tailscale-ssh-advertised' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  sshd-running' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  sshd-hardening' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  authorized-keys-perms' || ok=1
+  assert_no_leak "$case_name" "$out" || ok=1
+  return "$ok"
+}
+
+selftest_case_fallback_sshd_hardened() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-sshd-hardened"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home/.ssh" "$dir/workspaces"
+  chmod 700 "$dir/home/.ssh"
+  printf 'ssh-ed25519 AAAAtest test\n' >"$dir/home/.ssh/authorized_keys"
+  chmod 600 "$dir/home/.ssh/authorized_keys"
+  printf 'NODE_ROLE=host\n' >"$dir/local.env"
+  local out="$dir/out" err="$dir/err" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" WORKSPACES_DIR="$dir/workspaces" \
+    DOCTOR_CONFIG_FILE="$dir/local.env" FALLBACK_SSHD=1 \
+    DOCTOR_STUB_TS_STATE=running DOCTOR_STUB_TS_SSH=1 \
+    DOCTOR_STUB_UNAME=Linux DOCTOR_STUB_SSHD_RUNNING=1 \
+    bash "$SCRIPT_PATH" >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 0 "$rc" || ok=1
+  assert_stdout_not_contains "$case_name" "$out" '^FAIL' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  tailscale-ssh-advertised' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^PASS  sshd-running' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^PASS  sshd-hardening' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^PASS  authorized-keys-perms' || ok=1
+  assert_no_leak "$case_name" "$out" || ok=1
+  return "$ok"
+}
+
+selftest_case_fallback_sshd_bad_hardening() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-sshd-bad-hardening"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home/.ssh" "$dir/workspaces"
+  chmod 700 "$dir/home/.ssh"
+  printf 'ssh-ed25519 AAAAtest test\n' >"$dir/home/.ssh/authorized_keys"
+  chmod 600 "$dir/home/.ssh/authorized_keys"
+  printf 'NODE_ROLE=host\n' >"$dir/local.env"
+  local out="$dir/out" err="$dir/err" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" WORKSPACES_DIR="$dir/workspaces" \
+    DOCTOR_CONFIG_FILE="$dir/local.env" FALLBACK_SSHD=1 \
+    DOCTOR_STUB_TS_STATE=running DOCTOR_STUB_TS_SSH=1 \
+    DOCTOR_STUB_UNAME=Linux DOCTOR_STUB_SSHD_RUNNING=1 \
+    DOCTOR_STUB_SSHD_PERMITROOTLOGIN=yes \
+    bash "$SCRIPT_PATH" >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 1 "$rc" || ok=1
+  assert_stdout_contains "$case_name" "$out" '^FAIL  sshd-hardening.*permitrootlogin' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^PASS  sshd-running' || ok=1
+  assert_no_leak "$case_name" "$out" || ok=1
+  return "$ok"
+}
+
+selftest_case_fallback_sshd_not_running() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-sshd-not-running"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home/.ssh" "$dir/workspaces"
+  chmod 700 "$dir/home/.ssh"
+  printf 'ssh-ed25519 AAAAtest test\n' >"$dir/home/.ssh/authorized_keys"
+  chmod 600 "$dir/home/.ssh/authorized_keys"
+  printf 'NODE_ROLE=host\n' >"$dir/local.env"
+  local out="$dir/out" err="$dir/err" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" WORKSPACES_DIR="$dir/workspaces" \
+    DOCTOR_CONFIG_FILE="$dir/local.env" FALLBACK_SSHD=1 \
+    DOCTOR_STUB_TS_STATE=running DOCTOR_STUB_TS_SSH=1 \
+    DOCTOR_STUB_UNAME=Linux \
+    bash "$SCRIPT_PATH" >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 1 "$rc" || ok=1
+  assert_stdout_contains "$case_name" "$out" '^FAIL  sshd-running' || ok=1
+  assert_no_leak "$case_name" "$out" || ok=1
+  return "$ok"
+}
+
+selftest_case_fallback_sshd_bad_key_perms() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-sshd-bad-key-perms"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home/.ssh" "$dir/workspaces"
+  chmod 700 "$dir/home/.ssh"
+  printf 'ssh-ed25519 AAAAtest test\n' >"$dir/home/.ssh/authorized_keys"
+  chmod 644 "$dir/home/.ssh/authorized_keys"
+  printf 'NODE_ROLE=host\n' >"$dir/local.env"
+  local out="$dir/out" err="$dir/err" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" WORKSPACES_DIR="$dir/workspaces" \
+    DOCTOR_CONFIG_FILE="$dir/local.env" FALLBACK_SSHD=1 \
+    DOCTOR_STUB_TS_STATE=running DOCTOR_STUB_TS_SSH=1 \
+    DOCTOR_STUB_UNAME=Linux DOCTOR_STUB_SSHD_RUNNING=1 \
+    bash "$SCRIPT_PATH" >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 1 "$rc" || ok=1
+  assert_stdout_contains "$case_name" "$out" '^FAIL  authorized-keys-perms' || ok=1
+  assert_no_leak "$case_name" "$out" || ok=1
+  return "$ok"
+}
+
+selftest_case_fallback_sshd_client_role() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-sshd-client-role"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home/.ssh" "$dir/workspaces"
+  chmod 700 "$dir/home/.ssh"
+  printf 'NODE_ROLE=client\n' >"$dir/local.env"
+  local out="$dir/out" err="$dir/err" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" WORKSPACES_DIR="$dir/workspaces" \
+    DOCTOR_CONFIG_FILE="$dir/local.env" FALLBACK_SSHD=1 \
+    DOCTOR_STUB_TS_STATE=running DOCTOR_STUB_TS_SSH=1 \
+    bash "$SCRIPT_PATH" >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 0 "$rc" || ok=1
+  assert_stdout_not_contains "$case_name" "$out" '^FAIL' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  tailscale-ssh-advertised' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  workspaces-dir' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  platform-contract' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  sshd-running' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  sshd-hardening' || ok=1
+  assert_stdout_contains "$case_name" "$out" '^SKIP  authorized-keys-perms' || ok=1
+  assert_no_leak "$case_name" "$out" || ok=1
+  return "$ok"
+}
+
 run_other_scripts_check() {
   local script base self_base rc_all=0
   self_base="$(basename "$SCRIPT_PATH")"
@@ -704,6 +1010,12 @@ run_self_test() {
   selftest_case_role_from_flag "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
   selftest_case_macos_backend "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
   selftest_case_wsl_pid1 "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_sshd_disabled "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_sshd_hardened "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_sshd_bad_hardening "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_sshd_not_running "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_sshd_bad_key_perms "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_sshd_client_role "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
   run_other_scripts_check || overall_rc=1
 
   if [ "$overall_rc" -eq 0 ]; then
