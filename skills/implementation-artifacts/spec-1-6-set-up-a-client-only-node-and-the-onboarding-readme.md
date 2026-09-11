@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 187658, output: 72492, cache_read: 7978824, total: 8238974}
+final_revision: '8b15877e1bd0702f1fa10803d7ca989036b76c54'
 title: 'Set up a client-only node and the onboarding README'
 type: 'feature'
 created: '2026-09-11'
