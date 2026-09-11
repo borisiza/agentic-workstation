@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 149396, output: 58285, cache_read: 7397197, total: 7604878}
+final_revision: '40e571687f8efc53cb7228c159af2d9f93ccca98'
 title: 'Enroll a Linux host'
 type: 'feature'
 created: '2026-09-11'
