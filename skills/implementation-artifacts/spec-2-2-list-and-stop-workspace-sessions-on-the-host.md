@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 35524, output: 8894, cache_read: 4515886, total: 4560304}
+final_revision: '7c11746261ee29ce97f1b8af83ab473fb8fad77c'
 title: 'List and stop workspace sessions on the host'
 type: 'feature'
 created: '2026-09-11'
