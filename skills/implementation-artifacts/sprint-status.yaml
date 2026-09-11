@@ -44,8 +44,8 @@ development_status:
   1-6-set-up-a-client-only-node-and-the-onboarding-readme: done
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host: backlog
+  epic-2: in-progress
+  2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host: review
   2-2-list-and-stop-workspace-sessions-on-the-host: backlog
   2-3-connect-from-a-client-to-a-host-workspace-with-one-command: backlog
   2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di: backlog

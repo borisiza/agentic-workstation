@@ -73,3 +73,23 @@
 - source_spec: `skills/implementation-artifacts/spec-1-6-set-up-a-client-only-node-and-the-onboarding-readme.md`
   summary: docs/node-client.md gives no guidance for restrictive networks (corporate/campus firewalls blocking Tailscale's UDP hole-punching, DERP relay fallback and its latency) even though the guide explicitly targets "a laptop you carry around" — the client scenario most likely to hit NAT/firewall variability across networks.
   evidence: blind-hunter review of story 1.6 flagged this; addressing it well needs Tailscale-specific network-diagnostics guidance beyond this story's Tasks & Acceptance scope, and no sibling guide (node-linux.md/macos.md/wsl.md) covers this either.
+
+- source_spec: `skills/implementation-artifacts/spec-2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host.md`
+  summary: scripts/start-claude.sh does not check that tmux or claude are actually installed/on PATH before its final `exec tmux ...`; a missing tmux fails with a raw "command not found" (exit 127) instead of the script's own exit-2/one-stderr-line convention, and a missing claude leaves a dead tmux session behind instead of failing fast.
+  evidence: blind-hunter and edge-case-hunter reviews of story 2.1 both flagged this; doctor.sh already gatekeeps tool presence as a common check before any script should be run, so this is a defense-in-depth nicety rather than a required guard for this story's AC.
+
+- source_spec: `skills/implementation-artifacts/spec-2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host.md`
+  summary: the launched Claude Code session runs under `bash -lc` (a login shell), which sources login-init files but not `~/.bashrc`; if a reader's `claude` binary is only on PATH via an rc-file tool (e.g. nvm), the session can fail to find it even though their interactive shell does.
+  evidence: blind-hunter review of story 2.1 flagged this; it's a pre-existing convention risk shared with how this whole project assumes `claude`/`tailscale`/`tmux` are already durably on PATH (per doctor.sh's own tool checks), not a regression introduced by this story.
+
+- source_spec: `skills/implementation-artifacts/spec-2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host.md`
+  summary: scripts/start-claude.sh mirrors several of scripts/doctor.sh's own pre-existing edge-case gaps by design (per this story's Code Map, which explicitly instructs reusing doctor.sh's role-resolution pattern): `WORKSPACES_DIR="${WORKSPACES_DIR:-$HOME/workspaces}"` dereferences `$HOME` directly (crashes under `set -u` if HOME is unset; silently resolves to `/workspaces` if HOME is set-but-empty), sourcing `config/local.env` means an `exit` inside that file bypasses the `source_rc` diagnostic, `WORKSPACES_DIR` is never required to be an absolute path, and `SCRIPT_PATH` (derived from `BASH_SOURCE[0]:-$0`) is unreliable under unusual invocation styles (e.g. piped execution).
+  evidence: edge-case-hunter review of story 2.1 flagged these; each is a verbatim continuation of a pattern already shipped and accepted in scripts/doctor.sh (story 1.2), so fixing it here alone would create inconsistency — best addressed once, across both scripts, in a dedicated hardening pass.
+
+- source_spec: `skills/implementation-artifacts/spec-2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host.md`
+  summary: scripts/start-claude.sh's validate_workspace_dir only checks the workspace directory exists (`[ -d ]`), not that it's readable/executable by the current user, so a directory with wrong permissions passes preflight validation and only fails later, less clearly, inside the launched tmux session.
+  evidence: edge-case-hunter review of story 2.1 flagged this; not required by the story's AC (which only specifies the directory "does not exist" as a failure case), and a real but low-likelihood misconfiguration for a single-operator host.
+
+- source_spec: `skills/implementation-artifacts/spec-2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host.md`
+  summary: the self-test's assert_stderr_one_line helper only checks stderr has exactly one line, never the message content, so two different failure cases (e.g. bad-workspace-name vs. missing-role) could have their diagnostic text accidentally swapped without any self-test case noticing.
+  evidence: blind-hunter review of story 2.1 flagged this; a test-rigor improvement, not a functional defect — the AC only requires "one stderr line," not content-matching across cases.
