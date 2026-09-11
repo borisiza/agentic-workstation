@@ -221,10 +221,104 @@ ssh -o BatchMode=yes localhost exit || true
 ./scripts/doctor.sh
 ```
 
-## Caveat: no client-side automation yet
+## 7. Enroll a client key
 
-This guide only covers the **host** side. There is no `scripts/enroll.sh` to
-distribute a client's public key to this host's `authorized_keys`, and no
-`connect.sh --fallback` mode to reach it — you add keys and connect with
-plain `ssh <user>@<tailscale-hostname>` by hand for now. Both are tracked as
-follow-up work in a later story.
+This section covers the **client** side: generating a key, delivering its
+public half to the host, running `scripts/enroll.sh` there, and connecting
+with `connect.sh --fallback`.
+
+### Generate a client key (with a passphrase)
+
+On the **client**, generate a dedicated ed25519 keypair for this fallback
+(a separate key keeps this fallback's blast radius apart from any other
+key you already use):
+
+```sh
+ssh-keygen -t ed25519 -C "<your-name>@<client-hostname>" -f ~/.ssh/id_ed25519_fallback
+```
+
+Set a real passphrase when prompted -- never leave it empty. Add the key to
+your local `ssh-agent` so you aren't re-typing the passphrase on every
+connection:
+
+```sh
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519_fallback
+```
+
+**Never copy the private key** (`id_ed25519_fallback`, no extension)
+anywhere -- only the **public** half (`id_ed25519_fallback.pub`) ever
+leaves this machine.
+
+### Deliver the public key out-of-band
+
+Get the `.pub` file's contents to the host over a channel you already
+trust -- for example, over the tailnet itself:
+
+```sh
+tailscale file cp ~/.ssh/id_ed25519_fallback.pub <host-tailscale-name>:
+```
+
+On the host, accept it:
+
+```sh
+tailscale file get ~/
+```
+
+Any other out-of-band channel works too (pasting the one line over a chat
+you already trust, etc.) -- it's a public key, not a secret, but it still
+never belongs in a doc, commit, or issue in this repo.
+
+### Run `enroll.sh` on the host
+
+On the **host** (`NODE_ROLE=host` or `both`, `FALLBACK_SSHD=1` already set
+per step 5 above):
+
+```sh
+./scripts/enroll.sh ~/id_ed25519_fallback.pub
+```
+
+or pipe it in:
+
+```sh
+cat ~/id_ed25519_fallback.pub | ./scripts/enroll.sh
+```
+
+`enroll.sh` appends the key to `~/.ssh/authorized_keys` only if an
+equivalent key isn't already there, and fixes `~/.ssh`/`authorized_keys`
+permissions every run. It refuses (exit 2, no side effects, and it never
+prints the key) anything that isn't exactly one `ssh-ed25519` public key --
+wrong key type, multiple keys, or garbage input. Re-running it with the
+same key is safe: no duplicate line, no error. Re-enrolling the same key
+material with a different comment does **not** update the stored comment --
+the original line (and its original comment) is left as-is; to relabel an
+entry, edit `~/.ssh/authorized_keys` by hand.
+
+### Add the `Host` entry and connect
+
+On the **client**, copy the `Host <node>` stanza from
+[`config/ssh_config.example`](../config/ssh_config.example) into your own
+`~/.ssh/config` (never committed to this repo), filling in the host's
+tailnet name and the `<user>` account from step 2 above:
+
+```
+Host <node>
+  HostName <node>
+  User <user>
+  ServerAliveInterval 15
+  ServerAliveCountMax 3
+```
+
+Then connect the same way you would to any other workspace, adding
+`--fallback`:
+
+```sh
+./scripts/connect.sh --fallback <node> <workspace>
+```
+
+This execs
+`ssh -t <node> -- "$HOME/agentic-workstation/scripts/start-claude.sh" <workspace>`
+-- the login user and any other connection options come entirely from your
+`~/.ssh/config` entry, not from `SSH_USER`. Re-running the same command
+reattaches to the existing session, exactly like the primary
+`connect.sh <node> <workspace>` path.

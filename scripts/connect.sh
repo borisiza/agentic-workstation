@@ -3,6 +3,7 @@
 # client node, or list which tailnet peers are online right now.
 #
 # Usage: connect.sh <node> <workspace>
+#        connect.sh --fallback <node> <workspace>
 #        connect.sh
 #        connect.sh --check
 #        connect.sh -h|--help
@@ -17,7 +18,14 @@
 # node clones the repo to $HOME/agentic-workstation) since a non-interactive
 # tailscale ssh command never sources the remote login profile. Re-running
 # the same command reattaches -- delegated entirely to start-claude.sh's
-# own idempotent attach-or-create logic. With no arguments, lists tailnet
+# own idempotent attach-or-create logic. With --fallback <node> <workspace>
+# (for a host using the documented OpenSSH fallback, docs/fallback-openssh.md),
+# execs plain ssh instead of tailscale ssh:
+#   ssh -t <node> -- "$HOME/agentic-workstation/scripts/start-claude.sh" <workspace>
+# relying entirely on the client's own untracked ~/.ssh/config (see
+# config/ssh_config.example) for the login user and connection options --
+# this mode never reads SSH_USER and never calls tailscale, and it never
+# probes for or lists fallback hosts. With no arguments, lists tailnet
 # peers currently online, parsed live from `tailscale status` text only --
 # never persisted to a file. Never prints tokens, keys, tailnet IPs, or
 # node names beyond the hostnames `tailscale status` itself prints. See
@@ -33,6 +41,7 @@ ROLE=""
 usage() {
   cat <<'EOF'
 Usage: connect.sh <node> <workspace>
+       connect.sh --fallback <node> <workspace>
        connect.sh
        connect.sh --check
        connect.sh -h|--help
@@ -43,6 +52,14 @@ session for that workspace:
 <user> comes from SSH_USER (config/local.env), defaulting to the current
 login user; root is refused. Re-running the same command reattaches
 (scrollback intact) instead of starting a second session.
+
+With --fallback <node> <workspace>, execs plain ssh instead of
+tailscale ssh, for a host using the documented OpenSSH fallback (see
+docs/fallback-openssh.md):
+  ssh -t <node> -- "$HOME/agentic-workstation/scripts/start-claude.sh" <workspace>
+The login user and any other connection options come entirely from your
+own ~/.ssh/config Host <node> entry (see config/ssh_config.example) --
+this mode never reads SSH_USER and never calls tailscale.
 
 With no arguments, lists tailnet peers that are currently online, parsed
 live from `tailscale status` -- nothing is ever written to a file.
@@ -136,6 +153,32 @@ connect() {
 }
 
 # ---------------------------------------------------------------------------
+# Fallback connect mode (plain ssh, no tailscale, no SSH_USER)
+# ---------------------------------------------------------------------------
+
+# fallback_connect NODE WORKSPACE -- for a host using the documented
+# OpenSSH fallback (docs/fallback-openssh.md). Never probes for or lists
+# fallback hosts, and never touches resolve_ssh_user/SSH_USER: the login
+# user and any other connection options come entirely from the client's
+# own untracked ~/.ssh/config Host <node> stanza (config/ssh_config.example).
+fallback_connect() {
+  local node="$1" ws="$2"
+  if [ -z "$node" ]; then
+    die2 "Missing node name: usage: connect.sh --fallback <node> <workspace>."
+  fi
+  case "$node" in
+    -*)
+      die2 "Invalid node name '$node': must not start with '-' (looks like an option)."
+      ;;
+  esac
+  validate_workspace_name "$ws"
+  # '$HOME/...' is single-quoted so it is expanded by the *remote* shell,
+  # matching connect()'s own convention -- see that function's comment.
+  # shellcheck disable=SC2016
+  exec ssh -t "$node" -- '$HOME/agentic-workstation/scripts/start-claude.sh' "$ws"
+}
+
+# ---------------------------------------------------------------------------
 # Discovery mode
 # ---------------------------------------------------------------------------
 
@@ -224,6 +267,18 @@ esac
 EOF
 
   chmod +x "$bin_dir/tailscale"
+
+  cat >"$bin_dir/ssh" <<'EOF'
+#!/usr/bin/env bash
+# Fakes plain `ssh` for --fallback mode: records argv instead of opening a
+# real connection, so the self-test never calls tailscale for this path.
+if [ -n "${CONNECT_STUB_PLAIN_SSH_ARGV_FILE:-}" ]; then
+  printf '%s\n' "$@" >"$CONNECT_STUB_PLAIN_SSH_ARGV_FILE"
+fi
+exit "${CONNECT_STUB_PLAIN_SSH_EXIT_CODE:-0}"
+EOF
+
+  chmod +x "$bin_dir/ssh"
 }
 
 assert_exit_eq() {
@@ -604,6 +659,153 @@ selftest_case_help() {
   return "$ok"
 }
 
+selftest_case_fallback_happy_path() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-happy-path"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home"
+  local out="$dir/out" err="$dir/err" argv="$dir/plain-ssh-argv" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" \
+    DOCTOR_CONFIG_FILE="$dir/absent-local.env" NODE_ROLE=client \
+    CONNECT_STUB_PLAIN_SSH_ARGV_FILE="$argv" \
+    "$SCRIPT_PATH" --fallback fallbackhost demo >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 0 "$rc" || ok=1
+  # shellcheck disable=SC2016
+  assert_file_exact_lines "$case_name" "$argv" \
+    "-t" "fallbackhost" "--" '$HOME/agentic-workstation/scripts/start-claude.sh' "demo" || ok=1
+  return "$ok"
+}
+
+# Proves --fallback never touches SSH_USER/resolve_ssh_user: even with
+# SSH_USER set, the exec'd ssh argv carries only <node> -- the login user
+# comes entirely from the client's own ~/.ssh/config Host <node> entry.
+selftest_case_fallback_ignores_ssh_user() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-ignores-ssh-user"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home"
+  local out="$dir/out" err="$dir/err" argv="$dir/plain-ssh-argv" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" \
+    DOCTOR_CONFIG_FILE="$dir/absent-local.env" NODE_ROLE=client SSH_USER=alice \
+    CONNECT_STUB_PLAIN_SSH_ARGV_FILE="$argv" \
+    "$SCRIPT_PATH" --fallback fallbackhost demo >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 0 "$rc" || ok=1
+  # shellcheck disable=SC2016
+  assert_file_exact_lines "$case_name" "$argv" \
+    "-t" "fallbackhost" "--" '$HOME/agentic-workstation/scripts/start-claude.sh' "demo" || ok=1
+  return "$ok"
+}
+
+selftest_case_fallback_bad_workspace_name() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-bad-workspace-name"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home"
+  local out="$dir/out" err="$dir/err" argv="$dir/plain-ssh-argv" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" \
+    DOCTOR_CONFIG_FILE="$dir/absent-local.env" NODE_ROLE=client \
+    CONNECT_STUB_PLAIN_SSH_ARGV_FILE="$argv" \
+    "$SCRIPT_PATH" --fallback fallbackhost "Bad Name!" >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 2 "$rc" || ok=1
+  assert_stderr_one_line "$case_name" "$err" || ok=1
+  assert_file_absent "$case_name" "$argv" || ok=1
+  return "$ok"
+}
+
+selftest_case_fallback_wrong_arg_count() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-wrong-arg-count"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home"
+  local out="$dir/out" err="$dir/err" argv="$dir/plain-ssh-argv" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" \
+    DOCTOR_CONFIG_FILE="$dir/absent-local.env" NODE_ROLE=client \
+    CONNECT_STUB_PLAIN_SSH_ARGV_FILE="$argv" \
+    "$SCRIPT_PATH" --fallback fallbackhost >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 2 "$rc" || ok=1
+  assert_stderr_one_line "$case_name" "$err" || ok=1
+  assert_file_absent "$case_name" "$argv" || ok=1
+  return "$ok"
+}
+
+# Proves fallback_connect() rejects a <node> that looks like an ssh option
+# (e.g. a crafted/mistyped -oProxyCommand=... value) instead of passing it
+# through unguarded, which would let ssh parse it as an option rather than
+# a hostname.
+selftest_case_fallback_node_looks_like_option() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-node-looks-like-option"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home"
+  local out="$dir/out" err="$dir/err" argv="$dir/plain-ssh-argv" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" \
+    DOCTOR_CONFIG_FILE="$dir/absent-local.env" NODE_ROLE=client \
+    CONNECT_STUB_PLAIN_SSH_ARGV_FILE="$argv" \
+    "$SCRIPT_PATH" --fallback -oProxyCommand=evil demo >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 2 "$rc" || ok=1
+  assert_stderr_one_line "$case_name" "$err" || ok=1
+  assert_file_absent "$case_name" "$argv" || ok=1
+  return "$ok"
+}
+
+selftest_case_fallback_wrong_role() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-wrong-role"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home"
+  local out="$dir/out" err="$dir/err" argv="$dir/plain-ssh-argv" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" \
+    DOCTOR_CONFIG_FILE="$dir/absent-local.env" NODE_ROLE=host \
+    CONNECT_STUB_PLAIN_SSH_ARGV_FILE="$argv" \
+    "$SCRIPT_PATH" --fallback fallbackhost demo >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 2 "$rc" || ok=1
+  assert_stderr_one_line "$case_name" "$err" || ok=1
+  assert_file_absent "$case_name" "$argv" || ok=1
+  return "$ok"
+}
+
+# Proves connect.sh without --fallback is byte-for-byte unchanged (AD-3):
+# still execs `tailscale ssh` and never touches the new plain-ssh stub,
+# even though both stubs are now on PATH.
+selftest_case_fallback_flag_absent_unchanged() {
+  local sandbox="$1" stub_path="$2"
+  local case_name="fallback-flag-absent-unchanged"
+  local dir="$sandbox/$case_name"
+  mkdir -p "$dir/home"
+  local out="$dir/out" err="$dir/err" ts_argv="$dir/ssh-argv" plain_argv="$dir/plain-ssh-argv" rc=0 ok=0
+  set +e
+  env -i PATH="$stub_path" HOME="$dir/home" \
+    DOCTOR_CONFIG_FILE="$dir/absent-local.env" NODE_ROLE=client SSH_USER=alice \
+    CONNECT_STUB_SSH_ARGV_FILE="$ts_argv" CONNECT_STUB_PLAIN_SSH_ARGV_FILE="$plain_argv" \
+    "$SCRIPT_PATH" host1 demo >"$out" 2>"$err"
+  rc=$?
+  set -e
+  assert_exit_eq "$case_name" 0 "$rc" || ok=1
+  # shellcheck disable=SC2016
+  assert_file_exact_lines "$case_name" "$ts_argv" \
+    "-t" "alice@host1" "--" '$HOME/agentic-workstation/scripts/start-claude.sh' "demo" || ok=1
+  assert_file_absent "$case_name" "$plain_argv" || ok=1
+  return "$ok"
+}
+
 run_self_test() {
   # Deliberately not `local`: the EXIT trap below must still see it after
   # this function returns (bash pops `local`s before the trap fires).
@@ -633,6 +835,13 @@ run_self_test() {
   selftest_case_missing_workspace_arg "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
   selftest_case_too_many_args "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
   selftest_case_help "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_happy_path "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_ignores_ssh_user "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_bad_workspace_name "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_node_looks_like_option "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_wrong_arg_count "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_wrong_role "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
+  selftest_case_fallback_flag_absent_unchanged "$SELFTEST_SANDBOX" "$stub_path" || overall_rc=1
 
   if [ "$overall_rc" -eq 0 ]; then
     printf 'PASS  self-test -- all connect.sh --check assertions passed\n'
@@ -658,6 +867,14 @@ main() {
   fi
 
   resolve_and_validate_role
+
+  if [ $# -ge 1 ] && [ "$1" = "--fallback" ]; then
+    if [ $# -ne 3 ]; then
+      die2 "Usage: connect.sh --fallback <node> <workspace> (see --help)"
+    fi
+    fallback_connect "$2" "$3"
+    return
+  fi
 
   case $# in
     0)

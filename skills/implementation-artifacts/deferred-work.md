@@ -173,3 +173,27 @@
 - source_spec: `skills/implementation-artifacts/spec-3-1-opt-a-host-into-hardened-key-only-openssh-over-the-tailnet.md`
   summary: docs/fallback-openssh.md's `sshd -T` verification step (section 3) only checks the four restrictive hardening settings and never confirms `PubkeyAuthentication yes` is actually active, so a host with pubkey auth disabled by some prior local config could follow every step in the guide and still be unable to log in, with no diagnostic pointing at the real cause. Separately, `check_sshd_hardening()` runs `sshd -T` without `sudo` (unlike the guide's own manual `sudo sshd -T` instruction) — unconfirmed in this sandboxed environment whether this ever causes a permission-related false FAIL on a real host, since sshd -T is commonly usable unprivileged but this couldn't be verified empirically here.
   evidence: blind-hunter review of story 3.1 flagged both; adding a 5th check would exceed this story's frozen `<frozen-after-approval>` scope (the four named settings only), so it's recorded for a future decision rather than patched in-scope. The sudo risk is real but unconfirmed — worth a real-host smoke test before the next story that depends on this check.
+
+- source_spec: `skills/implementation-artifacts/spec-3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall.md`
+  summary: Neither `scripts/enroll.sh` nor `docs/fallback-openssh.md` documents how to revoke a lost/compromised client key or offboard a laptop from a fallback host — `enroll.sh` only appends, there is no removal command or manual-removal instructions.
+  evidence: blind-hunter review of story 3.2 flagged this; a real gap for a "key-only access" story, but this story's AC only covers enrollment and connecting, not revocation, and extends beyond the literal scope.
+
+- source_spec: `skills/implementation-artifacts/spec-3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall.md`
+  summary: `enroll.sh` only gates on `NODE_ROLE=host|both` and `FALLBACK_SSHD=1` — it never confirms the host's sshd is actually hardened (story 3.1's four settings) before enrolling a key, so an operator who sets `FALLBACK_SSHD=1` before finishing the earlier setup steps can enroll a key on a host that still allows password auth or hasn't restricted `AllowUsers`, with nothing warning them.
+  evidence: blind-hunter review of story 3.2 flagged this; verifying sshd hardening is `doctor.sh`'s job (story 3.1), not `enroll.sh`'s — a cross-script check is out of this story's own script boundary.
+
+- source_spec: `skills/implementation-artifacts/spec-3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall.md`
+  summary: `config/ssh_config.example`'s `Host <node>` template still has no `IdentityFile` guidance pointing at a non-default key path (e.g. `~/.ssh/id_ed25519_fallback`, the name `docs/fallback-openssh.md` section 7 itself recommends), so the whole `--fallback` connect flow silently depends on the key staying loaded in the local ssh-agent, with no mention that `ssh-add` must be re-run after reboot/logout.
+  evidence: blind-hunter review of story 3.2 flagged this; a continuation of the `IdentityFile`/`StrictHostKeyChecking` gap already deferred against story 2.3 (only the `FALLBACK_SSHD=1`/running-sshd precondition comment was closed by this story), not a new defect.
+
+- source_spec: `skills/implementation-artifacts/spec-3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall.md`
+  summary: `docs/fallback-openssh.md` section 7 has no explicit "test the raw connection" verification step and no warning about the client's own private-key file needing correct permissions, breaking the pattern sections 1-6 all follow (each ends with an explicit verification command).
+  evidence: blind-hunter review of story 3.2 flagged this; a docs-completeness gap, not required by this story's AC.
+
+- source_spec: `skills/implementation-artifacts/spec-3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall.md`
+  summary: No `doctor.sh` check verifies end-to-end that a client key was actually enrolled and the fallback path is reachable — `enroll.sh --check` is a hermetic self-test only, not a live connectivity check, so "did enrollment actually work" is left to manual inspection.
+  evidence: blind-hunter review of story 3.2 flagged this; a real observability gap, but adding a live-connectivity doctor.sh check is a design decision beyond this story's scope.
+
+- source_spec: `skills/implementation-artifacts/spec-3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall.md`
+  summary: `docs/fallback-openssh.md` section 7's "Deliver the public key out-of-band" advice ("Any other out-of-band channel works too") gives no concrete alternative for when Taildrop (`tailscale file cp`) is disabled by tailnet ACL policy, a common lockdown.
+  evidence: blind-hunter review of story 3.2 flagged this; a minor docs-polish gap, not required by this story's AC.
