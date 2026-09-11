@@ -52,6 +52,6 @@ development_status:
   epic-2-retrospective: optional
 
   epic-3: in-progress
-  3-1-opt-a-host-into-hardened-key-only-openssh-over-the-tailnet: review
+  3-1-opt-a-host-into-hardened-key-only-openssh-over-the-tailnet: done
   3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall: backlog
   epic-3-retrospective: optional
