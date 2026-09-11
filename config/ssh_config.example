@@ -1,0 +1,14 @@
+# ssh_config.example -- optional template for reaching a host with plain
+# `ssh` instead of `tailscale ssh` (e.g. the documented OpenSSH fallback).
+# Not read by any script; copy the stanza you need into your own
+# ~/.ssh/config and replace the placeholders with real values.
+#
+# Usage once configured:
+#   ssh <node>
+#   ssh <node> -- "$HOME/agentic-workstation/scripts/start-claude.sh" <workspace>
+
+Host <node>
+  HostName <node>
+  User <user>
+  ServerAliveInterval 15
+  ServerAliveCountMax 3
