@@ -1,0 +1,15 @@
+title = "agentic-workstation gitleaks config"
+
+# Keep gitleaks' full bundled ruleset; this file only narrows it with a
+# project-specific allowlist below. Do not add custom detection rules here.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Literal placeholder tokens used in docs/config templates — never real values"
+regexes = [
+  '''<node>''',
+  '''<user>''',
+  '''<workspace>''',
+  '''<distro>''',
+]
