@@ -5,7 +5,7 @@ created: '2026-09-10'
 status: 'in-progress'
 review_loop_iteration: 0
 context: []
-baseline_commit: 'f8739296e9fb82c8849cc9fa98c587d1e7e60dc7'
+baseline_commit: '27328fba06360d295fd544e5c4ec2baf82869724'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -50,12 +50,12 @@ baseline_commit: 'f8739296e9fb82c8849cc9fa98c587d1e7e60dc7'
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `scripts/.gitkeep`, `config/.gitkeep` -- create empty dirs -- match architecture source tree
-- [ ] `.gitignore` -- append `config/local.env`, `authorized_keys`, `docs/discovery/` -- close the remaining AC-11 gaps without touching existing entries
-- [ ] `.gitleaks.toml` -- allowlist regex for `<node>|<user>|<workspace>|<distro>` -- FR12 placeholder exception
-- [ ] `.pre-commit-config.yaml` -- gitleaks hook pinned v8.30.1 -- FR12 local gate
-- [ ] `.github/workflows/hygiene.yml` -- shellcheck 0.11.0 + gitleaks-action, push+PR triggers, full-history checkout -- FR11–14 CI gate
-- [ ] `README.md` -- public-repo rules stub -- M2 baseline doc requirement
+- [x] `scripts/.gitkeep`, `config/.gitkeep` -- create empty dirs -- match architecture source tree
+- [x] `.gitignore` -- append `config/local.env`, `authorized_keys`, `docs/discovery/` -- close the remaining AC-11 gaps without touching existing entries
+- [x] `.gitleaks.toml` -- allowlist regex for `<node>|<user>|<workspace>|<distro>` -- FR12 placeholder exception
+- [x] `.pre-commit-config.yaml` -- gitleaks hook pinned v8.30.1 -- FR12 local gate
+- [x] `.github/workflows/hygiene.yml` -- shellcheck 0.11.0 + gitleaks-action, push+PR triggers, full-history checkout -- FR11–14 CI gate
+- [x] `README.md` -- public-repo rules stub -- M2 baseline doc requirement
 
 **Acceptance Criteria:**
 - Given a fresh clone, when the tree is listed, then all required paths exist and empty dirs carry `.gitkeep`.
@@ -72,7 +72,7 @@ Gitleaks fixture for the "blocked" test case: use `pre-commit run --all-files` l
 
 **Commands:**
 - `pre-commit run --all-files` -- expected: passes on clean tree, blocks on injected fake secret
-- `gitleaks git --source . -v` -- expected: zero findings on full history
+- `gitleaks git . -v` -- expected: zero findings on full history (8.30.1 has no `--source` flag; the path is positional)
 - `shellcheck scripts/*.sh` -- expected: passes vacuously (no `.sh` files yet) or clean
 - `git status` after creating the six AC-11 probe files -- expected: no new untracked entries
 
