@@ -1,6 +1,6 @@
 ---
 token_cost: {input: 26106, output: 9575, cache_read: 4262783, total: 4298464}
-final_revision: '37655c34eb08896c1ceb7986c8decb9896165598'
+final_revision: 'e06181a7f940f06a8ecfa4d4113e8a641b47f32e'
 title: 'Start Claude Code in a persistent tmux session on the host'
 type: 'feature'
 created: '2026-09-11'
