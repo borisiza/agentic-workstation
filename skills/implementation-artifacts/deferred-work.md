@@ -5,3 +5,27 @@
 - source_spec: `skills/implementation-artifacts/spec-1-2-declare-the-node-role-and-verify-readiness-with-doctor-sh.md`
   summary: doctor.sh's run_other_scripts_check invokes each future scripts/*.sh --check with no timeout, so a hung sibling script would hang doctor.sh --check indefinitely.
   evidence: edge-case review of story 1.2 flagged this; no other scripts/*.sh exist yet so it cannot manifest today, and a portable timeout on bash 3.2/macOS needs coreutils (`timeout` is not built in, only GNU `timeout`/`gtimeout`) — worth revisiting once story 1.3+ actually adds a sibling script.
+
+- source_spec: `skills/implementation-artifacts/spec-1-3-enroll-a-linux-host.md`
+  summary: docs/node-linux.md doesn't tell the reader to hold the Tailscale package version after pinning it (apt-mark hold / dnf versionlock), so a routine system upgrade can silently move the host off 1.102.3.
+  evidence: blind-hunter review of story 1.3 flagged this; not part of the story's stated scope (install + enroll, not long-term version enforcement) and low blast radius for a personal PoC node.
+
+- source_spec: `skills/implementation-artifacts/spec-1-3-enroll-a-linux-host.md`
+  summary: docs/node-linux.md doesn't mention that some tailnets require new-device approval in the admin console before the device is reachable, which could strand a reader whose tailnet enforces it with no diagnostic pointer.
+  evidence: blind-hunter review of story 1.3 flagged this; the epic's stated assumption is the tailnet's unmodified default (check-mode ACL, no extra policy), under which personal tailnets don't require manual approval, so this doesn't block the common case.
+
+- source_spec: `skills/implementation-artifacts/spec-1-3-enroll-a-linux-host.md`
+  summary: docs/node-linux.md has no prerequisites/overview section (assumed outbound network access, sudo rights, an existing tailnet account) before the multi-stage procedure starts.
+  evidence: blind-hunter review of story 1.3 flagged this; an organizational nice-to-have, not required by the story's Given/When/Then acceptance criteria.
+
+- source_spec: `skills/implementation-artifacts/spec-1-3-enroll-a-linux-host.md`
+  summary: docs/node-linux.md gives no idempotency/rollback guidance if enrollment fails partway (e.g. after `tailscale up --ssh` but before `doctor.sh` passes), and re-running step 4's `cp config/local.env.example config/local.env` would silently overwrite an existing `config/local.env`.
+  evidence: blind-hunter and edge-case-hunter reviews of story 1.3 both flagged partial-failure/re-run gaps; worth a follow-up doc revision once real onboarding attempts surface which failure modes actually recur.
+
+- source_spec: `skills/implementation-artifacts/spec-1-3-enroll-a-linux-host.md`
+  summary: docs/node-linux.md doesn't clarify that `NODE_ROLE=host` is a purely local, repo-side setting with no corresponding Tailscale-side concept (e.g. a device tag), nor that `autogroup:self` only authorizes devices owned by the same tailnet identity — a reader could misattribute a connection failure.
+  evidence: edge-case-hunter review of story 1.3 flagged this; a real conceptual gap but secondary to the primary enrollment path this story's AC covers.
+
+- source_spec: `skills/implementation-artifacts/spec-1-3-enroll-a-linux-host.md`
+  summary: scripts/doctor.sh --check (its self-test) is never invoked in CI (.github/workflows/hygiene.yml only runs shellcheck + gitleaks) and no other invocation exists repo-wide, so nothing verifies doctor.sh's actual PASS/SKIP contract stays consistent with what onboarding docs tell readers to expect.
+  evidence: verification-gap review of story 1.3 confirmed this by reading hygiene.yml and searching the repo for any `doctor.sh --check` invocation; wiring doctor.sh --check into CI is a scripts/CI change, out of this docs-only story's boundaries (`Never: do not modify scripts/doctor.sh or any other script`).
