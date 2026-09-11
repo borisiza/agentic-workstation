@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 19089, output: 8349, cache_read: 2890248, total: 2917686}
+final_revision: '6cf7c391b44ec006ff6e129e334a77da09deec00'
 title: 'Enroll a macOS host'
 type: 'feature'
 created: '2026-09-11'
