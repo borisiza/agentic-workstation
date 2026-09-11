@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 139819, output: 48128, cache_read: 5012783, total: 5200730}
+final_revision: '91070ed403673ebcecad1b19e25322f4233ae9c3'
 title: 'Enroll a Windows host via WSL2'
 type: 'feature'
 created: '2026-09-11'
