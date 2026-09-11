@@ -113,3 +113,27 @@
 - source_spec: `skills/implementation-artifacts/spec-2-2-list-and-stop-workspace-sessions-on-the-host.md`
   summary: docs/product/poc-plan.md still refers to stop.sh's argument as "session-id" while the shipped script and this spec call it "workspace" (session name is derived as claude-<workspace>).
   evidence: blind-hunter review of story 2.2 flagged this; docs/product/poc-plan.md predates this story and wasn't touched by it, so reconciling the terminology is a documentation follow-up, not part of this story's scope.
+
+- source_spec: `skills/implementation-artifacts/spec-2-3-connect-from-a-client-to-a-host-workspace-with-one-command.md`
+  summary: scripts/connect.sh does not check that the `tailscale` binary is actually installed before its `exec tailscale ssh ...` (connect mode) or `tailscale status` call (discovery mode); a missing binary fails with a raw "command not found" (exit 127) or a misleading "is tailscaled running?" message instead of the script's own exit-2/one-line convention.
+  evidence: blind-hunter review of story 2.3 flagged this; extends the identical, already-deferred "tool presence not preflighted" pattern from scripts/start-claude.sh (story 2.1) to this new script -- doctor.sh already gatekeeps tool presence as a common check, so this is defense-in-depth, not a required guard for this story's AC.
+
+- source_spec: `skills/implementation-artifacts/spec-2-3-connect-from-a-client-to-a-host-workspace-with-one-command.md`
+  summary: connect.sh's resolve_ssh_user only rejects the literal string "root"; a whitespace-padded value (` root`) or an SSH_USER containing embedded whitespace/`@` isn't trimmed or rejected, so it could bypass the root check or produce a malformed `user@node` token that only fails at the tailscale layer.
+  evidence: blind-hunter and edge-case-hunter reviews of story 2.3 both flagged this; SSH_USER comes from the same trusted, single-operator config/local.env as other unvalidated values in this repo (e.g. WORKSPACES_DIR's own already-deferred lack of absolute-path validation), so this is a self-inflicted-misconfiguration-only risk, not a required guard.
+
+- source_spec: `skills/implementation-artifacts/spec-2-3-connect-from-a-client-to-a-host-workspace-with-one-command.md`
+  summary: discover_peers' offline-peer detection matches only an exact last-field token of "offline"; real `tailscale status` output can append other suffixes (e.g. tags, "expired") this repo has not verified against a live tailnet, so some offline or otherwise-unreachable peers could still be listed as connectable.
+  evidence: edge-case-hunter review of story 2.3 flagged this; verifying the exact set of suffixes `tailscale status` can emit requires a live tailnet not available in this environment, so a robust fix needs empirical confirmation rather than a blind patch.
+
+- source_spec: `skills/implementation-artifacts/spec-2-3-connect-from-a-client-to-a-host-workspace-with-one-command.md`
+  summary: config/ssh_config.example's `Host <node>` template gives no guidance on `StrictHostKeyChecking`/`IdentityFile`/host-key verification, and doesn't mention that the target host needs `FALLBACK_SSHD=1` (config/local.env.example) plus a running sshd for the template to work at all.
+  evidence: blind-hunter review of story 2.3 flagged this; this story's AC only requires a minimal `Host <node>` entry with keepalive settings as an optional plain-ssh alternative -- the full hardened-OpenSSH-fallback flow (key hygiene, sshd hardening) is Epic 3's explicit scope (FR18), not this story's.
+
+- source_spec: `skills/implementation-artifacts/spec-2-3-connect-from-a-client-to-a-host-workspace-with-one-command.md`
+  summary: README.md's four-layer table still says "Only L1 ... and doctor.sh ... exist today -- connect.sh, enroll.sh, start-claude.sh, status.sh, and stop.sh are this epic's Epic 2/3 build-out targets" -- stale for four of these five scripts (all of Epic 2 now ships), and this story adds the last Epic-2 one without correcting it.
+  evidence: blind-hunter review of story 2.3 flagged this; the staleness predates this story (already inaccurate after stories 2.1/2.2 shipped without a README update, per their own script-only scope boundaries), so this is a cross-cutting doc-consistency gap best fixed once rather than patched asymmetrically here.
+
+- source_spec: `skills/implementation-artifacts/spec-2-3-connect-from-a-client-to-a-host-workspace-with-one-command.md`
+  summary: skills/planning-artifacts/prds/prd-agentic-workstation-2026-09-10/prd.md (FR10) still describes host discovery as parsing `tailscale status --json`, which contradicts both AD-8 ("no jq") and this story's actual plain-text-parsing implementation.
+  evidence: blind-hunter review of story 2.3 flagged this; the PRD predates this story and wasn't touched by it, so reconciling the terminology is a documentation follow-up, not part of this story's scope.
