@@ -137,3 +137,11 @@
 - source_spec: `skills/implementation-artifacts/spec-2-3-connect-from-a-client-to-a-host-workspace-with-one-command.md`
   summary: skills/planning-artifacts/prds/prd-agentic-workstation-2026-09-10/prd.md (FR10) still describes host discovery as parsing `tailscale status --json`, which contradicts both AD-8 ("no jq") and this story's actual plain-text-parsing implementation.
   evidence: blind-hunter review of story 2.3 flagged this; the PRD predates this story and wasn't touched by it, so reconciling the terminology is a documentation follow-up, not part of this story's scope.
+
+- source_spec: `skills/implementation-artifacts/spec-2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di.md`
+  summary: docs/sessions.md doesn't warn that if the `claude` process inside `claude-<workspace>` exits or crashes on its own (not via a reboot or `stop.sh`), the tmux pane running it closes too, so the next `connect.sh` reattach silently starts a brand-new conversation instead of resuming the old one.
+  evidence: edge-case-hunter review of story 2.4 flagged this; it's inherent behavior of `start-claude.sh`'s `exec claude ...` launch pattern from story 2.1 (this story only documents reconnect flows, it doesn't change that launch pattern), so it's a pre-existing gap surfaced incidentally rather than something this story's diff caused.
+
+- source_spec: `skills/implementation-artifacts/spec-2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di.md`
+  summary: docs/sessions.md's `cp config/tmux.conf.example ~/.tmux.conf` step silently overwrites any pre-existing `~/.tmux.conf` on the host instead of merging or warning first.
+  evidence: edge-case-hunter review of story 2.4 flagged this; it's the same unguarded-`cp`-on-retry pattern already deferred for `config/local.env` (story 2.1's deferred-work entry) and `config/ssh_config.example`-style templates across this repo's onboarding docs, so fixing it only here would diverge from that established, already-accepted convention rather than fix it.
