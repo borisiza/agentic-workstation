@@ -86,9 +86,9 @@ neither — check status with `tailscale status` and manage the daemon with
 `brew services` instead.
 
 If a Mac must keep the GUI app (for example, another user on that machine
-relies on the menu-bar toggle), it can still join the tailnet for other tools
-over Tailscale SSH's key-only OpenSSH fallback instead of following this guide.
-That fallback guide is out of scope here — it ships as its own guide in Epic 3.
+relies on the menu-bar toggle), it can still join the tailnet using a
+hardened, key-only OpenSSH fallback instead of following this guide — see
+[docs/fallback-openssh.md](fallback-openssh.md).
 
 ## 5. Install required tools
 

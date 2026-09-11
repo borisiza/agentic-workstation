@@ -51,7 +51,7 @@ development_status:
   2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di: done
   epic-2-retrospective: optional
 
-  epic-3: backlog
-  3-1-opt-a-host-into-hardened-key-only-openssh-over-the-tailnet: backlog
+  epic-3: in-progress
+  3-1-opt-a-host-into-hardened-key-only-openssh-over-the-tailnet: review
   3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall: backlog
   epic-3-retrospective: optional
