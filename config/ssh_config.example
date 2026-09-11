@@ -3,9 +3,14 @@
 # Not read by any script; copy the stanza you need into your own
 # ~/.ssh/config and replace the placeholders with real values.
 #
+# The target host needs FALLBACK_SSHD=1 and a running hardened sshd (see
+# docs/fallback-openssh.md) plus your public key enrolled there via
+# scripts/enroll.sh -- this file only configures the client side.
+#
 # Usage once configured:
 #   ssh <node>
 #   ssh <node> -- "$HOME/agentic-workstation/scripts/start-claude.sh" <workspace>
+#   ./scripts/connect.sh --fallback <node> <workspace>
 
 Host <node>
   HostName <node>
