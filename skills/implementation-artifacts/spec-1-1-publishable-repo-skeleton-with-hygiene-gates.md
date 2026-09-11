@@ -2,7 +2,7 @@
 title: 'Publishable repo skeleton with hygiene gates'
 type: 'feature'
 created: '2026-09-10'
-status: 'in-progress'
+status: 'done'
 review_loop_iteration: 0
 context: []
 baseline_commit: '27328fba06360d295fd544e5c4ec2baf82869724'
@@ -75,4 +75,43 @@ Gitleaks fixture for the "blocked" test case: use `pre-commit run --all-files` l
 - `gitleaks git . -v` -- expected: zero findings on full history (8.30.1 has no `--source` flag; the path is positional)
 - `shellcheck scripts/*.sh` -- expected: passes vacuously (no `.sh` files yet) or clean
 - `git status` after creating the six AC-11 probe files -- expected: no new untracked entries
+
+## Suggested Review Order
+
+**CI hygiene gate**
+
+- Entry point — the CI job that gates every push/PR on shellcheck + gitleaks findings.
+  [`hygiene.yml:1`](../../.github/workflows/hygiene.yml#L1)
+
+- Gitleaks scans full history via `fetch-depth: 0`; version pinned separately from the action tag.
+  [`hygiene.yml:37`](../../.github/workflows/hygiene.yml#L37)
+
+- Shellcheck install is version-pinned and glob-safe (`nullglob`) so it passes vacuously with no `.sh` files yet.
+  [`hygiene.yml:16`](../../.github/workflows/hygiene.yml#L16)
+
+**Local pre-commit gate**
+
+- Mirrors the CI gitleaks check locally, pinned to the same `v8.30.1`.
+  [`.pre-commit-config.yaml:1`](../../.pre-commit-config.yaml#L1)
+
+**Secret allowlist**
+
+- Extends gitleaks' default ruleset with a narrow allowlist for the four literal placeholder tokens only.
+  [`.gitleaks.toml:5`](../../.gitleaks.toml#L5)
+
+**Gitignore and docs**
+
+- Appends the three remaining product secret patterns without touching existing sections.
+  [`.gitignore:29`](../../.gitignore#L29)
+
+- States the public-repo placeholder rule and where the hygiene gates live.
+  [`README.md:5`](../../README.md#L5)
+
+**Peripherals**
+
+- Empty placeholders matching the architecture source tree.
+  [`scripts/.gitkeep`](../../scripts/.gitkeep), [`config/.gitkeep`](../../config/.gitkeep)
+
+- Story status lifted to `in-progress` (epic lift included).
+  [`sprint-status.yaml:37`](sprint-status.yaml#L37)
 
