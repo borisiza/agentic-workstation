@@ -1,6 +1,6 @@
 ---
 token_cost: {input: 193684, output: 79621, cache_read: 14275094, total: 14548399}
-final_revision: '7fee0e38b2426f6d436c55fe03b274c04f8ffab9'
+final_revision: '97418c18001536c826ff8a130cdc31e339f4252b'
 title: 'Declare the node role and verify readiness with doctor.sh'
 type: 'feature'
 created: '2026-09-11'
