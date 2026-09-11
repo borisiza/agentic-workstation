@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 98733, output: 34754, cache_read: 2813625, total: 2947112}
+final_revision: '5aea2fe4d07c8a0fd74d03100c983c978c25a17e'
 title: 'Publishable repo skeleton with hygiene gates'
 type: 'feature'
 created: '2026-09-10'
