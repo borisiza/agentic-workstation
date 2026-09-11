@@ -93,3 +93,23 @@
 - source_spec: `skills/implementation-artifacts/spec-2-1-start-claude-code-in-a-persistent-tmux-session-on-the-host.md`
   summary: the self-test's assert_stderr_one_line helper only checks stderr has exactly one line, never the message content, so two different failure cases (e.g. bad-workspace-name vs. missing-role) could have their diagnostic text accidentally swapped without any self-test case noticing.
   evidence: blind-hunter review of story 2.1 flagged this; a test-rigor improvement, not a functional defect — the AC only requires "one stderr line," not content-matching across cases.
+
+- source_spec: `skills/implementation-artifacts/spec-2-2-list-and-stop-workspace-sessions-on-the-host.md`
+  summary: neither status.sh --check nor stop.sh --check covers the tmux binary being entirely absent from PATH, so that failure mode (both scripts currently surface it identically to "no sessions" / "session not found" rather than a distinguishable error) is untested.
+  evidence: blind-hunter review of story 2.2 flagged this; start-claude.sh's own self-test has the identical pre-existing gap (always assumes a working tmux stub), so this is a shared pattern across all three scripts, not a defect unique to this story.
+
+- source_spec: `skills/implementation-artifacts/spec-2-2-list-and-stop-workspace-sessions-on-the-host.md`
+  summary: status.sh/stop.sh's resolve_and_validate_role only redirects stderr (not stdout) while sourcing config/local.env, so a config file with a stray stdout-writing command would corrupt status.sh's exact-match stdout contract.
+  evidence: blind-hunter review of story 2.2 flagged this; the pattern is reused verbatim from start-claude.sh's own already-accepted resolve_and_validate_role (Code Map's explicit reuse instruction), so fixing it here alone would diverge from the sibling script.
+
+- source_spec: `skills/implementation-artifacts/spec-2-2-list-and-stop-workspace-sessions-on-the-host.md`
+  summary: status.sh renders the session `created` field in the host's local timezone with no offset/label, which is ambiguous for an operator on a client node in a different timezone from the host.
+  evidence: blind-hunter review of story 2.2 flagged this; not required by the story's AC (which only specifies "creation time," no format), and this is a personal PoC tool typically used across nearby timezones.
+
+- source_spec: `skills/implementation-artifacts/spec-2-2-list-and-stop-workspace-sessions-on-the-host.md`
+  summary: status.sh's `IFS='|' read` parsing of `tmux list-sessions` output would misalign the name/attached/created fields if an unrelated (non-`claude-*`) tmux session on the same host has a literal `|` character in its name, potentially causing a non-integer compare (`[ "$attached" -gt 0 ]`) to abort the script under `set -e`.
+  evidence: blind-hunter and edge-case-hunter reviews of story 2.2 both flagged this; requires an adversarial-or-unusual pre-existing tmux session name from an unrelated tool on a single-operator host, low likelihood but a real latent fragility worth hardening later (e.g. anchor the split from the right, or reject lines with unexpected field counts).
+
+- source_spec: `skills/implementation-artifacts/spec-2-2-list-and-stop-workspace-sessions-on-the-host.md`
+  summary: docs/product/poc-plan.md still refers to stop.sh's argument as "session-id" while the shipped script and this spec call it "workspace" (session name is derived as claude-<workspace>).
+  evidence: blind-hunter review of story 2.2 flagged this; docs/product/poc-plan.md predates this story and wasn't touched by it, so reconciling the terminology is a documentation follow-up, not part of this story's scope.
