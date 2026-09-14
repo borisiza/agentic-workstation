@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 24940, output: 12626, cache_read: 5290862, total: 5328428}
+final_revision: 'c8b5191f38533f2c463429d64e414eb2b1b7c2d2'
 title: 'Make config sourcing consistent across the scripts'
 type: 'bugfix'
 created: '2026-09-13'
