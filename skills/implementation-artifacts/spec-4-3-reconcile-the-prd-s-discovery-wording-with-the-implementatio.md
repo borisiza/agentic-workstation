@@ -1,4 +1,5 @@
 ---
+token_cost: {input: 123516, output: 29822, cache_read: 5123561, total: 5276899}
 title: 'Reconcile the PRD''s discovery wording with the implementation'
 type: 'chore'
 created: '2026-09-13'
@@ -7,7 +8,7 @@ review_loop_iteration: 0
 context: []
 route: 'one-shot'
 baseline_commit: 'd789566a5891c299233543dba8a7e7d7b0baf3c0'
-final_revision: '8584f1b'
+final_revision: '25f7c363ab69323fe16fe35f73633baca2efec34'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
