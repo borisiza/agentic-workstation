@@ -4,7 +4,8 @@ A `claude-<workspace>` session survives a dropped link because it lives in a
 persistent tmux session on the *host*, not in the SSH/`tailscale ssh`
 connection to it. This guide covers what to do when the link drops:
 reattaching, detaching on purpose, recovering after the host itself reboots,
-and where the underlying Claude Code transcript lives. Before using this
+recovering after the `claude` process itself exits or crashes, and where the
+underlying Claude Code transcript lives. Before using this
 guide, first enroll the host (one of [node-linux.md](node-linux.md),
 [node-macos.md](node-macos.md), [node-wsl.md](node-wsl.md)) and start a
 session on it from a client via [node-client.md](node-client.md)'s
@@ -115,6 +116,37 @@ the reboot is gone, but the conversation context is not. This is deliberately
 not scripted: automating a host reboot recovery is out of scope for this
 story.
 
+## Caveat: the claude process itself exits or crashes
+
+This is a third, distinct failure mode from the two caveats above — not the
+host rebooting, not a dropped link — and the tmux session is gone either way:
+`start-claude.sh` execs `claude` directly in the pane (see "1. Reattach after
+a dropped link" above), so if the `claude` process inside `claude-<workspace>`
+exits on its own or crashes, there is no shell left behind it to keep the
+pane, and therefore the tmux session, alive. The next `connect.sh` reattach
+finds nothing to attach to and silently starts a brand-new conversation,
+exactly as if `stop.sh` had been run.
+
+Run `scripts/status.sh` first to see this before you reconnect: a workspace
+whose `claude` process has died has no `claude-<workspace>` entry in its
+output — either it's missing from a mixed list, or `status.sh` prints `no
+sessions` outright — clearly distinct from an `attached`/`detached` line for
+a session that's still running (see section 3 above).
+
+Recovery is the same manual, unscripted two-step flow, consistent with the
+host-reboot caveat above: recreate the session, then resume the old
+conversation from Claude Code's own on-disk history in a second window:
+
+```sh
+scripts/start-claude.sh <workspace>
+```
+
+then, in a second window inside that same tmux session (`Ctrl-b` then `c`):
+
+```sh
+claude --resume claude-<workspace>
+```
+
 ## Caveat: tailscaled restart and manual recovery
 
 If `tailscaled` itself restarts or crashes on the host while you're mid-session
@@ -150,3 +182,15 @@ line-by-line against `history-limit`/`mouse` tmux syntax. The end-to-end
 reconnect-under-a-minute claim and the both-directions coexistence claim
 still require running the M1 protocol (see epics.md Story 2.4) on two real
 tailnet nodes; see this story's spec file for that result.
+
+The "Caveat: the claude process itself exits or crashes" section (retro item
+2, `epic-3-retro-2026-09-11.md`) adds no new script or code path either — per
+this story's own Design Notes, it deliberately reuses the "Caveat: host
+reboot" section's exact recovery wording rather than restating it in new
+words, and its `scripts/status.sh` pre-check claim was verified against that
+script's existing `print_sessions()` function and its
+`selftest_case_zero_sessions`/`selftest_case_mixed_sessions` self-test cases,
+which already prove `no sessions` / a missing entry is distinguishable from
+an `attached`/`detached` line for a live session. No `status.sh` change was
+needed or made; `status.sh --check` and `doctor.sh --check` still pass and
+`shellcheck scripts/status.sh` stays clean.
