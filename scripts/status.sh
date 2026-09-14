@@ -56,7 +56,7 @@ resolve_and_validate_role() {
     local source_rc=0
     set +eu
     # shellcheck source=/dev/null
-    . "$CONFIG_FILE" 2>/dev/null
+    . "$CONFIG_FILE"
     source_rc=$?
     set -eu
     if [ "$source_rc" -ne 0 ]; then
@@ -176,6 +176,15 @@ assert_file_absent() {
   return 0
 }
 
+assert_file_contains() {
+  local case_name="$1" file="$2" pattern="$3"
+  if [ ! -f "$file" ] || ! grep -Fq -- "$pattern" "$file"; then
+    printf 'self-test FAILED [%s]: expected %s to contain: %s\n' "$case_name" "$file" "$pattern" >&2
+    return 1
+  fi
+  return 0
+}
+
 assert_stdout_eq() {
   local case_name="$1" file="$2" expected="$3" actual
   actual="$(cat "$file" 2>/dev/null || true)"
@@ -248,7 +257,8 @@ selftest_case_broken_config() {
   rc=$?
   set -e
   assert_exit_eq "$case_name" 2 "$rc" || ok=1
-  assert_stderr_one_line "$case_name" "$err" || ok=1
+  assert_file_contains "$case_name" "$err" "config/local.env" || ok=1
+  assert_file_contains "$case_name" "$err" "syntax error" || ok=1
   assert_file_absent "$case_name" "$argv" || ok=1
   return "$ok"
 }
