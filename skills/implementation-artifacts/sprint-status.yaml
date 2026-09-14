@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-10-2026 15:39
-last_updated: 09-13-2026 23:45
+last_updated: 09-13-2026 22:58
 project: agentic-workstation
 project_key: NOKEY
 tracking_system: file-system
@@ -56,7 +56,7 @@ development_status:
   3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall: done
   epic-3-retrospective: done
 
-  epic-4: in-progress
+  epic-4: done
   4-1-warn-that-a-self-terminated-session-does-not-resume: done
   4-2-make-config-sourcing-consistent-across-the-scripts: done
   4-3-reconcile-the-prd-s-discovery-wording-with-the-implementatio: done
@@ -75,21 +75,21 @@ action_items:
     action: "Handle or document the self-terminating claude case: the next connect.sh
       silently starts a new conversation instead of resuming"
     owner: "dev loop"
-    status: open
+    status: done
     ref: "skills/implementation-artifacts/epic-3-retro-2026-09-11.md"
   - id: "epic-3-retro-item-3-make-config-sourcing-consistent-across-s"
     epic: 3
     action: "Make config sourcing consistent across scripts — doctor.sh surfaces local.env
       syntax errors, siblings suppress them with 2>/dev/null"
     owner: "dev loop"
-    status: open
+    status: done
     ref: "skills/implementation-artifacts/epic-3-retro-2026-09-11.md"
   - id: "epic-3-retro-item-4-reconcile-prd-fr10-wording-with-ad-8-and"
     epic: 3
     action: "Reconcile PRD FR10 wording with AD-8 and the implemented plain-text parsing
       (no jq)"
     owner: "owner"
-    status: open
+    status: done
     ref: "skills/implementation-artifacts/epic-3-retro-2026-09-11.md"
   - id: "epic-3-retro-item-5-verify-enroll-sh-and-connect-sh-fallback"
     epic: 3
