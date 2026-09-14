@@ -102,7 +102,7 @@ resolve_and_validate_role() {
     local source_rc=0
     set +eu
     # shellcheck source=/dev/null
-    . "$CONFIG_FILE" 2>/dev/null
+    . "$CONFIG_FILE"
     source_rc=$?
     set -eu
     if [ "$source_rc" -ne 0 ]; then
@@ -546,9 +546,9 @@ selftest_case_missing_role() {
 }
 
 # Mirrors start-claude.sh/status.sh/stop.sh's broken-config case: a
-# config/local.env that exists but fails to source must exit 2 with one
-# stderr line, before the role check even runs, and before any tailscale
-# call.
+# config/local.env that exists but fails to source must exit 2 with a
+# diagnostic naming the config file, before the role check even runs, and
+# before any tailscale call.
 selftest_case_broken_config() {
   local sandbox="$1" stub_path="$2"
   local case_name="broken-config"
@@ -564,7 +564,8 @@ selftest_case_broken_config() {
   rc=$?
   set -e
   assert_exit_eq "$case_name" 2 "$rc" || ok=1
-  assert_stderr_one_line "$case_name" "$err" || ok=1
+  assert_file_contains "$case_name" "$err" "config/local.env" || ok=1
+  assert_file_contains "$case_name" "$err" "syntax error" || ok=1
   assert_file_absent "$case_name" "$argv" || ok=1
   assert_file_absent "$case_name" "$log" || ok=1
   return "$ok"
