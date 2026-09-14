@@ -456,3 +456,65 @@ So that the exception path stays one command and one key per machine.
 
 **Given** both scripts
 **Then** `enroll.sh` exposes `--check`, both conform to AD-8, and `doctor.sh` aggregates `enroll.sh --check` on hosts where it applies
+
+## Epic 4: Close the retrospective's actionable follow-through
+
+Three findings the sprint retrospective routed as fix-now, each traceable to a
+recorded source. Scoped to what one machine can verify: the two items needing a
+second tailnet node (M1 protocol, fallback-host end-to-end) stay with the owner
+and are deliberately excluded from this epic.
+
+**Source:** `skills/implementation-artifacts/epic-3-retro-2026-09-11.md`, action items 2, 3 and 4.
+
+### Story 4.1: Warn that a self-terminated session does not resume
+
+As the owner,
+I want the docs to state what happens when the `claude` process dies on its own,
+So that I understand why a reattach sometimes starts an empty conversation instead of silently losing my context.
+
+**Acceptance Criteria:**
+
+**Given** `docs/sessions.md`
+**When** I read the reattach flow
+**Then** it states that if the `claude` process inside `claude-<workspace>` exits or crashes on its own (not via `stop.sh` or a reboot), its tmux pane closes with it and the next `connect.sh` starts a brand-new conversation rather than resuming — and it names `claude --resume claude-<workspace>` as the recovery, consistent with the host-reboot flow already documented (AD-4)
+
+**Given** `scripts/status.sh`
+**When** a workspace has no live `claude-<workspace>` tmux session
+**Then** its output distinguishes "no session" from a running one clearly enough that the empty case is visible before reconnecting, without adding any new dependency (AD-8)
+
+**Given** the change
+**Then** `status.sh --check` and `doctor.sh --check` still pass, shellcheck stays clean, and the deferred-work entry that recorded this finding is marked as addressed
+
+### Story 4.2: Make config sourcing consistent across the scripts
+
+As the owner,
+I want every script to treat a broken `config/local.env` the same way,
+So that a syntax error is never reported by one command and silently swallowed by another.
+
+**Acceptance Criteria:**
+
+**Given** the six scripts in `scripts/`
+**When** I inspect how each sources `$CONFIG_FILE` in `resolve_and_validate_role`
+**Then** they all use the same form — `doctor.sh` currently sources without suppression while `status.sh` and siblings use `2>/dev/null` — and the chosen form surfaces the shell's own error text for a malformed file rather than hiding it (FR17)
+
+**Given** a `config/local.env` containing a deliberate syntax error
+**When** I run each of the six scripts
+**Then** every one of them fails with a message naming the config file, and none of them proceeds with an unset or partially-sourced role
+
+**Given** the change
+**Then** all six `--check` self-tests pass, `doctor.sh --check` still aggregates the five siblings, and shellcheck stays clean
+
+### Story 4.3: Reconcile the PRD's discovery wording with the implementation
+
+As the owner of a public repo,
+I want the PRD to describe host discovery the way it is actually built,
+So that a reader following the PRD is not sent toward a `jq` dependency the architecture forbids.
+
+**Acceptance Criteria:**
+
+**Given** `prd.md` FR10, which states discovery "lists reachable hosts from `tailscale status --json`"
+**When** I compare it to `connect.sh`
+**Then** the PRD wording is updated to describe the implemented plain-text parsing of `tailscale status`, consistent with AD-8's no-`jq` rule, without changing FR10's intent (discovery is `tailscale status`, never a committed host list)
+
+**Given** the reconciliation
+**Then** the `deferred-work.md` entry that recorded this divergence is marked as addressed, and no other PRD requirement is edited
