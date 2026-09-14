@@ -1,4 +1,6 @@
 ---
+token_cost: {input: 166454, output: 38503, cache_read: 6923424, total: 7128381}
+final_revision: '0ef628bc4664813b3fd305ca691851d903444588'
 title: 'Warn that a self-terminated session does not resume'
 type: 'feature'
 created: '2026-09-13'
