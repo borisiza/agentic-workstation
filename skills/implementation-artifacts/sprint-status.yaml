@@ -58,7 +58,7 @@ development_status:
 
   epic-4: in-progress
   4-1-warn-that-a-self-terminated-session-does-not-resume: done
-  4-2-make-config-sourcing-consistent-across-the-scripts: review
+  4-2-make-config-sourcing-consistent-across-the-scripts: done
   4-3-reconcile-the-prd-s-discovery-wording-with-the-implementatio: backlog
   epic-4-retrospective: optional
 action_items:
