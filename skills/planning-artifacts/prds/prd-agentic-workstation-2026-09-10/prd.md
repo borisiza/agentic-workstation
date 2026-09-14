@@ -2,7 +2,7 @@
 title: Agentic Workstation PRD
 status: final
 created: 2026-09-10
-updated: 2026-09-10
+updated: 2026-09-13
 ---
 
 # Agentic Workstation — PRD
@@ -62,7 +62,7 @@ The repository is **public**. Everything committed — code, scripts, docs, BMAD
 
 ### F4. Operability scripts
 - FR9. `scripts/doctor.sh` verifies prerequisites (tailscale + tailnet membership, `--ssh` advertised on hosts, tmux, claude, git) and reports gaps without printing secrets or node names.
-- FR10. `scripts/start-claude.sh`, `status.sh`, `stop.sh` cover the session lifecycle on a host (poc-plan Phase 5, reduced to Claude-only for MVP); `scripts/connect.sh` is the client side (lists reachable hosts from `tailscale status --json`, then attaches); `scripts/enroll.sh` exists only for the FR18 fallback.
+- FR10. `scripts/start-claude.sh`, `status.sh`, `stop.sh` cover the session lifecycle on a host (poc-plan Phase 5, reduced to Claude-only for MVP); `scripts/connect.sh` is the client side (lists reachable hosts by parsing the plain-text output of `tailscale status`, never `--json`/`jq`, then attaches); `scripts/enroll.sh` exists only for the FR18 fallback.
 
 ### F5. Public-repo hygiene
 - FR11. `.gitignore` excludes keys, tokens, session state, logs, node role config, and any machine-inventory output (e.g. `docs/discovery/`).
