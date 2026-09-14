@@ -137,6 +137,7 @@
 - source_spec: `skills/implementation-artifacts/spec-2-3-connect-from-a-client-to-a-host-workspace-with-one-command.md`
   summary: skills/planning-artifacts/prds/prd-agentic-workstation-2026-09-10/prd.md (FR10) still describes host discovery as parsing `tailscale status --json`, which contradicts both AD-8 ("no jq") and this story's actual plain-text-parsing implementation.
   evidence: blind-hunter review of story 2.3 flagged this; the PRD predates this story and wasn't touched by it, so reconciling the terminology is a documentation follow-up, not part of this story's scope.
+  addressed_by: `skills/implementation-artifacts/spec-4-3-reconcile-the-prd-s-discovery-wording-with-the-implementatio.md`
 
 - source_spec: `skills/implementation-artifacts/spec-2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di.md`
   summary: docs/sessions.md doesn't warn that if the `claude` process inside `claude-<workspace>` exits or crashes on its own (not via a reboot or `stop.sh`), the tmux pane running it closes too, so the next `connect.sh` reattach silently starts a brand-new conversation instead of resuming the old one.
