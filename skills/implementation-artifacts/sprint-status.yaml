@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 09-10-2026 15:39
-last_updated: 09-11-2026 14:17
+last_updated: 09-13-2026 22:04
 project: agentic-workstation
 project_key: NOKEY
 tracking_system: file-system
@@ -55,6 +55,12 @@ development_status:
   3-1-opt-a-host-into-hardened-key-only-openssh-over-the-tailnet: done
   3-2-enroll-a-client-key-on-a-fallback-host-and-connect-with-fall: done
   epic-3-retrospective: done
+
+  epic-4: backlog
+  4-1-warn-that-a-self-terminated-session-does-not-resume: backlog
+  4-2-make-config-sourcing-consistent-across-the-scripts: backlog
+  4-3-reconcile-the-prd-s-discovery-wording-with-the-implementatio: backlog
+  epic-4-retrospective: optional
 action_items:
   - id: "epic-3-retro-item-1-execute-the-m1-protocol-on-two-real-tail"
     epic: 3
