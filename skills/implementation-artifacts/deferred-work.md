@@ -141,6 +141,7 @@
 - source_spec: `skills/implementation-artifacts/spec-2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di.md`
   summary: docs/sessions.md doesn't warn that if the `claude` process inside `claude-<workspace>` exits or crashes on its own (not via a reboot or `stop.sh`), the tmux pane running it closes too, so the next `connect.sh` reattach silently starts a brand-new conversation instead of resuming the old one.
   evidence: edge-case-hunter review of story 2.4 flagged this; it's inherent behavior of `start-claude.sh`'s `exec claude ...` launch pattern from story 2.1 (this story only documents reconnect flows, it doesn't change that launch pattern), so it's a pre-existing gap surfaced incidentally rather than something this story's diff caused.
+  addressed_by: `skills/implementation-artifacts/spec-4-1-warn-that-a-self-terminated-session-does-not-resume.md`
 
 - source_spec: `skills/implementation-artifacts/spec-2-4-survive-a-dropped-link-and-resume-within-a-minute-in-both-di.md`
   summary: docs/sessions.md's `cp config/tmux.conf.example ~/.tmux.conf` step silently overwrites any pre-existing `~/.tmux.conf` on the host instead of merging or warning first.
