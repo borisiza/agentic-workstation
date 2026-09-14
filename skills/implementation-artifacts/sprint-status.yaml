@@ -59,7 +59,7 @@ development_status:
   epic-4: in-progress
   4-1-warn-that-a-self-terminated-session-does-not-resume: done
   4-2-make-config-sourcing-consistent-across-the-scripts: done
-  4-3-reconcile-the-prd-s-discovery-wording-with-the-implementatio: review
+  4-3-reconcile-the-prd-s-discovery-wording-with-the-implementatio: done
   epic-4-retrospective: optional
 action_items:
   - id: "epic-3-retro-item-1-execute-the-m1-protocol-on-two-real-tail"
