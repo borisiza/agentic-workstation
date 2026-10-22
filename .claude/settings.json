@@ -12,7 +12,7 @@
         ]
       },
       {
-        "matcher": "Bash|Grep",
+        "matcher": "Grep",
         "hooks": [
           {
             "type": "command",
