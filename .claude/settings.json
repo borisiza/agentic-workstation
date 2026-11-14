@@ -30,6 +30,29 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/hooks/bmad-next-nudge.sh\"",
+            "statusMessage": "Checkpoint de sesión BMAD (SessionStart)"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$HOME/.claude/scripts/bmad-precompact-lecciones.sh\"",
+            "statusMessage": "Verificando lecciones antes de compactar"
+          }
+        ]
+      }
     ]
   }
 }
